@@ -366,9 +366,7 @@ function AuthView({ onAuthenticated, toast }) {
         <div className="hidden lg:flex flex-col justify-between p-10 border-r border-white/10 bg-gradient-to-br from-violet-950/20 via-black to-[#07080e]">
           <div>
             <div className="flex items-center gap-3">
-              <div className="rounded-xl bg-gradient-to-br from-violet-600 to-cyan-500 p-2.5 shadow-lg">
-                <Code2 size={22} className="text-white" />
-              </div>
+              <img src="/devrank_logo.png" alt="DevRank UZ Logo" className="w-10 h-10 object-contain rounded-xl" />
               <div>
                 <span className="font-black text-xl tracking-tight">DevRank</span>{" "}
                 <span className="font-bold text-xs bg-violet-500/20 text-violet-300 px-2 py-0.5 rounded-full border border-violet-500/30">UZ</span>
@@ -505,9 +503,7 @@ function Sidebar({ view, setView, onLogout, user, mobileOpen, setMobileOpen }) {
     <>
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-[260px] border-r border-white/[0.08] bg-[#090a11]/95 px-5 py-6 lg:flex lg:flex-col backdrop-blur-2xl">
         <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-gradient-to-br from-violet-600 to-cyan-500 p-2 shadow-lg">
-            <Code2 size={20} className="text-white" />
-          </div>
+          <img src="/devrank_logo.png" alt="DevRank UZ Logo" className="w-9 h-9 object-contain rounded-xl" />
           <div>
             <div className="font-black tracking-tight text-base text-white">
               DevRank <span className="text-violet-400">UZ</span>
@@ -567,9 +563,7 @@ function Sidebar({ view, setView, onLogout, user, mobileOpen, setMobileOpen }) {
             <div>
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-gradient-to-br from-violet-600 to-cyan-500 p-2">
-                    <Code2 size={18} />
-                  </div>
+                  <img src="/devrank_logo.png" alt="DevRank UZ Logo" className="w-8 h-8 object-contain rounded-xl" />
                   <div className="font-black text-lg">DevRank UZ</div>
                 </div>
                 <button type="button" onClick={() => setMobileOpen(false)} className="text-slate-400">
