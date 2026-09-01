@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 
 const API_URL = "https://devrank-backend-production.up.railway.app";
+const API_BASE_URL = API_URL;
 
 const STORAGE = {
   token: "devrank_token",
