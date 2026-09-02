@@ -1,6 +1,8 @@
-/** @type {import('tailwindcss').Config} */
+// tailwind.config.js
 module.exports = {
-  content: ['./src/**/*.{js,jsx,ts,tsx}'],
-  theme: { extend: {} },
-  plugins: []
-};
+  content: ["./src/**/*.{js,jsx,ts,tsx}"], // Shu qator barcha jsx fayllarni o'qishini ta'minlaydi
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}
