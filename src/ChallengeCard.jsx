@@ -1,15 +1,15 @@
 export default function ChallengeCard({ challenge }) {
-  // Backend'dan keladigan completed yoki status qiymatini tekshiramiz
+  // Backenddan kelayotgan holatni tekshiramiz
   const isCompleted = challenge.completed || challenge.status === 'COMPLETED';
   const isLocked = challenge.locked || challenge.status === 'LOCKED';
 
   return (
     <div className={`p-6 rounded-2xl border transition-all ${
       isCompleted 
-        ? 'bg-green-950/20 border-green-500/40 shadow-lg shadow-green-950/10' // Bajarilgan bo'lsa yashirim fon va yashil chegara
+        ? 'bg-green-950/20 border-green-500/40' // Ishlab bo'lingan bo'lsa yashil fon va chegara
         : isLocked 
-        ? 'bg-red-950/10 border-red-500/20 opacity-70' 
-        : 'bg-gray-900 border-gray-800 hover:border-gray-700'
+        ? 'bg-red-950/10 border-red-500/20 opacity-70' // Bloklangan bo'lsa qizg'ish
+        : 'bg-gray-900 border-gray-800' // Oddiy holat
     }`}>
       <div className="flex justify-between items-start mb-3">
         <span className="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
@@ -26,17 +26,17 @@ export default function ChallengeCard({ challenge }) {
           {challenge.difficulty} • {challenge.category}
         </span>
 
-        {/* Holatga qarab tugma yoki yozuv chiqishi */}
+        {/* Holatga qarab yozuvni o'zgartirish */}
         {isCompleted ? (
           <span className="text-green-400 font-semibold flex items-center gap-1.5 text-sm">
             Bajarildi ✓
           </span>
         ) : isLocked ? (
-          <span className="text-red-400 font-semibold text-sm flex items-center gap-1">
+          <span className="text-red-400 font-semibold text-sm">
             Bloklandi ✕
           </span>
         ) : (
-          <a href={`/challenge/${challenge.id}`} className="text-blue-400 hover:text-blue-300 font-medium text-sm flex items-center gap-1">
+          <a href={`/challenge/${challenge.id}`} className="text-blue-400 hover:text-blue-300 font-medium text-sm">
             Ochish &rarr;
           </a>
         )}
