@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
 import ChallengeCard from './ChallengeCard'; // yoki yo'li qayerda bo'lsa
-import Quiz from './Quiz'; // yoki yo'li qayerda bo'lsa
 import Editor from "@monaco-editor/react";
 import {
   Activity,
