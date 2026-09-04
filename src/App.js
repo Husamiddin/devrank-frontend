@@ -10,6 +10,7 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  Clock,
   Code2,
   ExternalLink,
   Eye,
@@ -1926,12 +1927,369 @@ function ProjectModal({ project, onClose, toast, refreshUser }) {
   );
 }
 
+// ----------------- COMPETITION TIMER HELPERS -----------------
+function calculateTimeLeft(targetDate) {
+  if (!targetDate) return { days: 0, hours: 0, minutes: 0, seconds: 0, isPast: true, total: 0 };
+  const diff = new Date(targetDate).getTime() - Date.now();
+  if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0, isPast: true, total: 0 };
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((diff / 1000 / 60) % 60);
+  const seconds = Math.floor((diff / 1000) % 60);
+  return { days, hours, minutes, seconds, isPast: false, total: diff };
+}
+
+function LiveTimerBox({ targetDate, label = "Musobaqa boshlanishiga qolgan vaqt", isLive = false }) {
+  const [timeLeft, setTimeLeft] = useState(() => calculateTimeLeft(targetDate));
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(calculateTimeLeft(targetDate));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [targetDate]);
+
+  const pad = (n) => String(n).padStart(2, "0");
+
+  return (
+    <div className={cn(
+      "rounded-2xl border p-5 transition",
+      isLive
+        ? "border-emerald-500/40 bg-emerald-500/[0.05] shadow-[0_0_25px_rgba(16,185,129,0.15)]"
+        : "border-violet-500/30 bg-violet-500/[0.04]"
+    )}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className={cn("w-2.5 h-2.5 rounded-full", isLive ? "bg-emerald-400 animate-ping" : "bg-violet-400 animate-pulse")} />
+          <span className="text-xs font-bold text-white uppercase tracking-wider">{label}</span>
+        </div>
+        <div className="text-[10px] text-slate-400 font-mono">Jonli Vaqt</div>
+      </div>
+
+      <div className="grid grid-cols-4 gap-2 text-center">
+        <div className="rounded-xl border border-white/10 bg-black/40 p-2.5">
+          <div className="text-2xl lg:text-3xl font-black text-white font-mono">{pad(timeLeft.days)}</div>
+          <div className="text-[10px] text-slate-400 font-medium mt-0.5">Kun</div>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-black/40 p-2.5">
+          <div className="text-2xl lg:text-3xl font-black text-white font-mono">{pad(timeLeft.hours)}</div>
+          <div className="text-[10px] text-slate-400 font-medium mt-0.5">Soat</div>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-black/40 p-2.5">
+          <div className="text-2xl lg:text-3xl font-black text-white font-mono">{pad(timeLeft.minutes)}</div>
+          <div className="text-[10px] text-slate-400 font-medium mt-0.5">Daqiqa</div>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-black/40 p-2.5">
+          <div className={cn("text-2xl lg:text-3xl font-black font-mono", isLive ? "text-emerald-400" : "text-violet-400")}>
+            {pad(timeLeft.seconds)}
+          </div>
+          <div className="text-[10px] text-slate-400 font-medium mt-0.5">Soniya</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ----------------- COMPETITION ARENA (50 QUESTIONS) -----------------
+function CompetitionArena({ compId, onBack, toast, user }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [selectedAns, setSelectedAns] = useState("");
+  const [codeAns, setCodeAns] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const loadArena = useCallback(async () => {
+    try {
+      const res = await api.get(`/api/competitions/${compId}/questions`);
+      setData(res.data);
+    } catch (err) {
+      toast("error", "Xatolik", apiMessage(err));
+      onBack();
+    } finally {
+      setLoading(false);
+    }
+  }, [compId, onBack, toast]);
+
+  useEffect(() => { loadArena(); }, [loadArena]);
+
+  const questions = data?.questions || [];
+  const currentQ = questions[activeIdx] || null;
+
+  useEffect(() => {
+    if (currentQ) {
+      setSelectedAns(currentQ.solvedInfo?.answer || "");
+      setCodeAns(currentQ.codeTemplate || "");
+    }
+  }, [activeIdx, currentQ]);
+
+  async function submitAnswer(ansValue) {
+    if (!currentQ || submitting) return;
+    const finalAnswer = ansValue || (currentQ.type === "QUIZ" ? selectedAns : codeAns);
+    if (!finalAnswer) {
+      toast("warning", "Diqqat", "Javobni tanlang yoki yozing!");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await api.post(`/api/competitions/${compId}/questions/${currentQ.id}/answer`, { answer: finalAnswer });
+      if (res.data.correct) {
+        toast("success", "Barakalla!", res.data.message);
+      } else {
+        toast("error", "Noto'g'ri", res.data.message);
+      }
+      await loadArena();
+    } catch (err) {
+      toast("error", "Xato", apiMessage(err));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="py-20 text-center text-slate-400 text-sm animate-pulse">
+        Musobaqa savollari yuklanmoqda (50 ta savol)...
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const solvedCount = questions.filter(q => q.status === "SOLVED").length;
+  const isStarted = new Date(data.competition.startsAt) <= new Date();
+  const isEnded = new Date(data.competition.endsAt) <= new Date();
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300">
+      {/* Top Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={onBack} className="p-2 rounded-xl hover:bg-white/[0.04] text-slate-400">
+            <ArrowLeft size={18} />
+          </button>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-black text-white">{data.competition.title}</h2>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/20">
+                50 ta Savol Maydoni
+              </span>
+            </div>
+            <p className="text-xs text-slate-400">Jamoangiz: <strong className="text-white">{data.team.name}</strong> • Ball: <strong className="text-amber-400">{data.team.score} pts</strong></p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <div className="text-[10px] text-slate-400">Yechilgan savollar</div>
+            <div className="text-sm font-black text-emerald-400">{solvedCount} / 50 ta</div>
+          </div>
+          <button
+            type="button"
+            onClick={loadArena}
+            className="p-2.5 rounded-xl border border-white/10 bg-white/[0.02] text-slate-400 hover:text-white transition"
+            title="Yangilash"
+          >
+            <RefreshCw size={14} />
+          </button>
+        </div>
+      </div>
+
+      {/* Live Timer Alert */}
+      {!isStarted ? (
+        <LiveTimerBox targetDate={data.competition.startsAt} label="Musobaqa boshlanishiga qolgan vaqt" isLive={false} />
+      ) : !isEnded ? (
+        <LiveTimerBox targetDate={data.competition.endsAt} label="Musobaqa yakunlanishiga qolgan vaqt" isLive={true} />
+      ) : (
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs font-bold text-center">
+          Musobaqa yakunlangan. Natijalar hisoblanmoqda!
+        </div>
+      )}
+
+      {/* Round-Robin Turn Notice */}
+      <div className="p-3 rounded-xl border border-violet-500/20 bg-violet-500/[0.03] text-xs text-slate-300 flex items-center gap-2">
+        <span className="text-violet-400">🎯</span>
+        <span>
+          <strong>Jamoaviy taqsimot:</strong> Savollar jamoa a'zolari o'rtasida navbatma-navbat taqsimlangan. Binafsha hoshiyali savollar — aynan sizga mo'ljallangan!
+        </span>
+      </div>
+
+      {/* Question Selector Bar (1 to 50) */}
+      <Glass className="p-4">
+        <div className="text-xs font-bold text-slate-300 mb-2 flex items-center justify-between">
+          <span>Savollar xaritasi (50 ta)</span>
+          <span className="text-[10px] text-slate-400">1-20: Oson | 21-35: O'rta | 36-45: Qiyin | 46-50: Kod</span>
+        </div>
+        <div className="grid grid-cols-10 sm:grid-cols-12 md:grid-cols-16 lg:grid-cols-25 gap-1.5">
+          {questions.map((q, idx) => {
+            const isSelected = idx === activeIdx;
+            const isSolved = q.status === "SOLVED";
+            return (
+              <button
+                key={q.id}
+                type="button"
+                onClick={() => setActiveIdx(idx)}
+                className={cn(
+                  "h-8 rounded-lg text-xs font-bold font-mono transition flex items-center justify-center relative",
+                  isSelected
+                    ? "ring-2 ring-violet-400 scale-105 z-10"
+                    : "",
+                  isSolved
+                    ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                    : q.isMyTurn
+                      ? "border border-violet-400/60 bg-violet-500/10 text-violet-300"
+                      : "bg-white/[0.02] border border-white/10 text-slate-400 hover:border-white/20"
+                )}
+                title={`Savol #${q.orderIndex} (${q.difficulty}) - ${isSolved ? "Yechilgan" : q.isMyTurn ? "Sizning navbatingiz" : "Yechilmagan"}`}
+              >
+                {q.orderIndex}
+                {isSolved && <span className="absolute -top-1 -right-1 text-[8px] text-emerald-400 font-black">✓</span>}
+                {q.isMyTurn && !isSolved && <span className="absolute -top-0.5 -left-0.5 w-1.5 h-1.5 rounded-full bg-violet-400" />}
+              </button>
+            );
+          })}
+        </div>
+      </Glass>
+
+      {/* Active Question Box */}
+      {currentQ && (
+        <Glass className="p-6 space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] pb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono font-bold text-white bg-white/10 px-2.5 py-1 rounded-lg">
+                #{currentQ.orderIndex}
+              </span>
+              <span className={cn(
+                "text-[10px] font-black uppercase px-2.5 py-1 rounded-full border",
+                currentQ.difficulty === "easy" ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20" :
+                currentQ.difficulty === "medium" ? "bg-amber-500/10 text-amber-300 border-amber-500/20" :
+                currentQ.difficulty === "hard" ? "bg-orange-500/10 text-orange-300 border-orange-500/20" :
+                "bg-red-500/10 text-red-300 border-red-500/20"
+              )}>
+                {currentQ.difficulty}
+              </span>
+              <span className="text-xs font-bold text-amber-400 font-mono">+{currentQ.points} ball</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {currentQ.status === "SOLVED" ? (
+                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg flex items-center gap-1">
+                  <Check size={13} /> Jamoa yechdi ({currentQ.solvedInfo?.answeredBy})
+                </span>
+              ) : currentQ.isMyTurn ? (
+                <span className="text-xs font-bold text-violet-300 bg-violet-500/10 border border-violet-500/20 px-3 py-1 rounded-lg">
+                  🎯 Sizga biriktirilgan savol
+                </span>
+              ) : null}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-base lg:text-lg font-bold text-white leading-relaxed">{currentQ.question}</h3>
+          </div>
+
+          {/* QUIZ TYPE: 4 Options */}
+          {currentQ.type === "QUIZ" && currentQ.options && (
+            <div className="grid sm:grid-cols-2 gap-3 pt-2">
+              {currentQ.options.map((opt, i) => {
+                const optLetter = String.fromCharCode(65 + i);
+                const isSelected = selectedAns === opt;
+                const isSolvedCorrect = currentQ.status === "SOLVED" && currentQ.solvedInfo?.answer === opt;
+
+                return (
+                  <button
+                    key={opt}
+                    type="button"
+                    disabled={currentQ.status === "SOLVED" || submitting || !isStarted || isEnded}
+                    onClick={() => {
+                      setSelectedAns(opt);
+                      submitAnswer(opt);
+                    }}
+                    className={cn(
+                      "flex items-start gap-3 p-4 rounded-xl border text-left transition select-none",
+                      isSolvedCorrect
+                        ? "border-emerald-500 bg-emerald-500/15 text-emerald-200 shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+                        : isSelected
+                          ? "border-violet-500 bg-violet-500/15 text-white"
+                          : "border-white/10 bg-white/[0.02] text-slate-300 hover:border-white/20 hover:bg-white/[0.04]",
+                      (currentQ.status === "SOLVED" || !isStarted || isEnded) && "cursor-default"
+                    )}
+                  >
+                    <span className="w-6 h-6 rounded-lg bg-white/10 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                      {optLetter}
+                    </span>
+                    <span className="text-xs font-medium leading-5">{opt}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* CODE TYPE: Coding editor for Extreme 46-50 */}
+          {currentQ.type === "CODE" && (
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span>Dasturlash tili: <strong className="text-white uppercase">{currentQ.language || "JavaScript"}</strong></span>
+                <span className="text-red-400 font-bold">Ekstremal Daraja (150 ball)</span>
+              </div>
+              <textarea
+                rows={8}
+                value={codeAns}
+                onChange={(e) => setCodeAns(e.target.value)}
+                disabled={currentQ.status === "SOLVED" || !isStarted || isEnded}
+                placeholder="// Kod yechimingizni shu yerga yozing..."
+                className="w-full font-mono text-xs text-emerald-300 bg-black/60 border border-white/10 rounded-xl p-4 outline-none focus:border-violet-500 leading-5"
+                style={{ tabSize: 2 }}
+              />
+              {currentQ.status !== "SOLVED" && isStarted && !isEnded && (
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={() => submitAnswer(codeAns)}
+                  className="px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold transition disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <Code2 size={14} /> {submitting ? "Tekshirilmoqda..." : "Kodni topshirish (150 ball)"}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Prev / Next buttons */}
+          <div className="flex items-center justify-between border-t border-white/[0.06] pt-4">
+            <button
+              type="button"
+              disabled={activeIdx === 0}
+              onClick={() => setActiveIdx(i => i - 1)}
+              className="px-4 py-2 rounded-xl border border-white/10 text-xs font-bold text-slate-300 hover:bg-white/[0.04] disabled:opacity-30"
+            >
+              ← Oldingi savol
+            </button>
+            <span className="text-xs text-slate-500 font-mono">
+              {activeIdx + 1} / 50
+            </span>
+            <button
+              type="button"
+              disabled={activeIdx === questions.length - 1}
+              onClick={() => setActiveIdx(i => i + 1)}
+              className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-xs font-bold text-white transition disabled:opacity-30"
+            >
+              Keyingi savol →
+            </button>
+          </div>
+        </Glass>
+      )}
+    </div>
+  );
+}
+
 // ----------------- COMPETITIONS VIEW -----------------
 function CompetitionsView({ toast, user }) {
   const [competitions, setCompetitions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedComp, setSelectedComp] = useState(null);
   const [joining, setJoining] = useState(false);
+  const [inArena, setInArena] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1953,6 +2311,10 @@ function CompetitionsView({ toast, user }) {
       const res = await api.post(`/api/competitions/${compId}/join`, { teamId });
       toast("success", "Muvaffaqiyat!", res.data?.message || "Jamoaga qo'shildingiz!");
       await load();
+      if (selectedComp && selectedComp.id === compId) {
+        const updated = await api.get(`/api/competitions/${compId}`);
+        setSelectedComp(updated.data?.item);
+      }
     } catch (err) {
       toast("error", "Xato", apiMessage(err));
     } finally {
@@ -1966,9 +2328,22 @@ function CompetitionsView({ toast, user }) {
     return { text: "Yakunlangan", color: "text-slate-400 bg-slate-500/10 border-slate-500/20" };
   };
 
+  if (inArena && selectedComp) {
+    return (
+      <CompetitionArena
+        compId={selectedComp.id}
+        onBack={() => setInArena(false)}
+        toast={toast}
+        user={user}
+      />
+    );
+  }
+
   if (selectedComp) {
     const comp = selectedComp;
     const myTeam = comp.teams?.find(t => t.members?.some(m => m.userId === user?.id));
+    const isStarted = new Date(comp.startsAt) <= new Date();
+    const isEnded = new Date(comp.endsAt) <= new Date();
 
     return (
       <div className="space-y-6 animate-in fade-in duration-300">
@@ -1976,35 +2351,76 @@ function CompetitionsView({ toast, user }) {
           <button type="button" onClick={() => setSelectedComp(null)} className="p-2 rounded-xl hover:bg-white/[0.04] text-slate-400">
             <ArrowLeft size={18} />
           </button>
-          <div>
-            <h2 className="text-xl font-black text-white">{comp.title}</h2>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-black text-white">{comp.title}</h2>
+              <span className="text-[10px] font-bold text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded-full">
+                50 ta Savol
+              </span>
+            </div>
             <p className="text-xs text-slate-400">{comp.description}</p>
           </div>
         </div>
 
+        {/* Live Timer Banner */}
+        {!isStarted ? (
+          <LiveTimerBox targetDate={comp.startsAt} label="Musobaqa boshlanishiga qolgan vaqt" isLive={false} />
+        ) : !isEnded ? (
+          <LiveTimerBox targetDate={comp.endsAt} label="Jonli Musobaqa Ketmoqda — Yakunlanishiga qolgan vaqt" isLive={true} />
+        ) : (
+          <div className="p-4 rounded-xl bg-slate-500/10 border border-slate-500/20 text-slate-400 text-xs font-bold text-center">
+            Musobaqa yakunlangan
+          </div>
+        )}
+
+        {/* Action Button to Enter 50 Questions Arena */}
+        {myTeam && (
+          <div className="p-5 rounded-2xl border border-violet-500/40 bg-gradient-to-r from-violet-600/20 via-purple-600/20 to-cyan-600/20 backdrop-blur-xl flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div className="text-sm font-black text-white flex items-center gap-2">
+                <span>⚡ Musobaqa Maydoni</span>
+                <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">50 ta Savol</span>
+              </div>
+              <p className="text-xs text-slate-300 mt-1">
+                Sizning jamoangiz: <strong className="text-violet-300">{myTeam.name}</strong> • Ball: <strong className="text-amber-400">{myTeam.score} pts</strong>
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setInArena(true)}
+              className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-black uppercase tracking-wider transition shadow-[0_0_20px_rgba(124,58,237,0.4)] flex items-center gap-2"
+            >
+              <Play size={14} /> Maydonga Kirish
+            </button>
+          </div>
+        )}
+
         {comp.rules && (
           <Glass className="p-5">
-            <div className="text-xs font-bold text-violet-400 mb-2">Qoidalar</div>
+            <div className="text-xs font-bold text-violet-400 mb-2">Musobaqa Qoidalari</div>
             <div className="text-xs text-slate-300 leading-5">{comp.rules}</div>
           </Glass>
         )}
 
         <div className="grid gap-4">
-          <div className="flex items-center gap-2 text-sm font-bold text-white">
-            <Users size={18} className="text-violet-400" />
-            <span>Jamoalar ({comp.teams?.length || 0})</span>
+          <div className="flex items-center justify-between text-sm font-bold text-white">
+            <div className="flex items-center gap-2">
+              <Users size={18} className="text-violet-400" />
+              <span>Jamoalar ({comp.teams?.length || 0})</span>
+            </div>
+            <span className="text-xs text-slate-400 font-normal">Eng yuqori ball to'plagan jamoa g'olib bo'ladi</span>
           </div>
 
           {(comp.teams || []).map((team) => {
             const isMine = team.members?.some(m => m.userId === user?.id);
             return (
-              <Glass key={team.id} className={cn("p-5", isMine && "border-violet-500/30 bg-violet-500/[0.04]")}>
+              <Glass key={team.id} className={cn("p-5", isMine && "border-violet-500/40 bg-violet-500/[0.05]")}>
                 <div className="flex justify-between items-center mb-3">
                   <div className="flex items-center gap-2">
                     <span className="text-lg">{team.avatar || "🏆"}</span>
                     <div>
                       <h4 className="font-bold text-white text-sm">{team.name}</h4>
-                      <span className="text-[10px] text-slate-400">{team.members?.length || 0} a'zo • Ball: {team.score}</span>
+                      <span className="text-[10px] text-slate-400">{team.members?.length || 0} a'zo • Ball: <strong className="text-amber-400">{team.score} pts</strong></span>
                     </div>
                     {isMine && <span className="text-[10px] font-bold text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded-full">Sizning jamoangiz</span>}
                   </div>
@@ -2043,9 +2459,9 @@ function CompetitionsView({ toast, user }) {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <Header
-        eyebrow="Jamoaviy"
+        eyebrow="Jamoaviy Bellashuv"
         title="Musobaqalar"
-        subtitle="Jamoalar bo'lib bellashing va o'z mahoratingizni namoyish eting."
+        subtitle="Jonli taymer bilan boshlanuvchi jamoaviy 50 ta savolli olimpiadalar."
         action={<Button variant="secondary" onClick={load} icon={RefreshCw}>Yangilash</Button>}
       />
 
@@ -2058,24 +2474,50 @@ function CompetitionsView({ toast, user }) {
           {competitions.map((comp) => {
             const st = statusLabel(comp.status);
             const totalMembers = (comp.teams || []).reduce((acc, t) => acc + (t.members?.length || 0), 0);
+            const isStarted = new Date(comp.startsAt) <= new Date();
+            const isEnded = new Date(comp.endsAt) <= new Date();
+
             return (
-              <Glass key={comp.id} onClick={() => setSelectedComp(comp)} className="p-5">
-                <div className="flex justify-between items-start">
+              <Glass key={comp.id} onClick={() => setSelectedComp(comp)} className="p-5 hover:border-white/20 transition cursor-pointer">
+                <div className="flex flex-wrap justify-between items-start gap-2">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full border", st.color)}>{st.text}</span>
                       <span className="text-[10px] text-slate-500 capitalize">{comp.category}</span>
+                      <span className="text-[10px] font-bold text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded-full">
+                        50 ta savol
+                      </span>
                     </div>
                     <h4 className="font-bold text-white text-base">{comp.title}</h4>
                     <p className="mt-1 text-xs text-slate-400 leading-5 line-clamp-2">{comp.description}</p>
                   </div>
+
+                  {/* Countdown Badge in Card */}
+                  <div className="text-right">
+                    {!isStarted ? (
+                      <div className="text-xs font-mono font-bold text-cyan-300 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+                        <Clock size={12} className="text-cyan-400" />
+                        <span>Boshlanishiga oz qoldi</span>
+                      </div>
+                    ) : !isEnded ? (
+                      <div className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl flex items-center gap-1.5 animate-pulse">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                        <span>Jonli ketmoqda</span>
+                      </div>
+                    ) : (
+                      <div className="text-xs font-mono text-slate-500 bg-white/[0.02] border border-white/10 px-3 py-1.5 rounded-xl">
+                        Yakunlangan
+                      </div>
+                    )}
+                  </div>
                 </div>
+
                 <div className="mt-4 flex items-center justify-between pt-3 border-t border-white/[0.06] text-[10px] text-slate-500 font-medium">
                   <span>{comp.teams?.length || 0} jamoa • {totalMembers} ishtirokchi</span>
                   <span className="text-xs text-slate-400">
                     {new Date(comp.startsAt).toLocaleDateString("uz-UZ")} — {new Date(comp.endsAt).toLocaleDateString("uz-UZ")}
                   </span>
-                  <span className="text-violet-400 font-bold">Batafsil →</span>
+                  <span className="text-violet-400 font-bold">Maydonga o'tish →</span>
                 </div>
               </Glass>
             );
