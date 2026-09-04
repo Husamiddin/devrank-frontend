@@ -343,7 +343,7 @@ function AuthView({ onAuthenticated, toast }) {
       const payload =
         mode === "login"
           ? { email: form.email.trim(), password: form.password }
-          : { name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim(), password: form.password };
+          : { name: form.name.trim(), email: form.email.trim(), phone: (form.countryCode || "+998") + form.phone.trim(), password: form.password };
 
       const response = await api.post(endpoint, payload);
       const token = response.data.token;
@@ -448,18 +448,38 @@ function AuthView({ onAuthenticated, toast }) {
               />
 
               {mode === "register" ? (
-                <Field
-                  label="Telefon raqam"
-                  icon={Activity}
-                  placeholder="+998 90 123 45 67"
-                  value={form.phone}
-                  onChange={(e) => {
-                    let val = e.target.value;
-                    if (!val.startsWith("+998")) val = "+998 " + val.replace(/\D/g, "");
-                    setForm({ ...form, phone: val });
-                  }}
-                  required
-                />
+                <div>
+                  <div className="mb-1 text-xs text-slate-400 font-medium">Telefon raqam *</div>
+                  <div className="flex gap-2">
+                    <select
+                      value={form.countryCode || "+998"}
+                      onChange={(e) => setForm({ ...form, countryCode: e.target.value, phone: "" })}
+                      className="w-[100px] shrink-0 rounded-xl border border-white/10 bg-[#111320] px-2 py-2.5 text-xs text-white outline-none focus:border-violet-500"
+                    >
+                      <option value="+998">🇺🇿 +998</option>
+                      <option value="+7">🇷🇺 +7</option>
+                    </select>
+                    <input
+                      type="tel"
+                      placeholder={form.countryCode === "+7" ? "9XX XXX XX XX" : "XX XXX XX XX"}
+                      value={form.phone}
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/\D/g, "");
+                        const maxLen = form.countryCode === "+7" ? 10 : 9;
+                        if (digits.length <= maxLen) {
+                          setForm({ ...form, phone: digits });
+                        }
+                      }}
+                      maxLength={form.countryCode === "+7" ? 10 : 9}
+                      required
+                      className="flex-1 rounded-xl border border-white/10 bg-white/[0.02] px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500 placeholder:text-slate-600"
+                    />
+                  </div>
+                  <div className="mt-1 text-[10px] text-slate-500">
+                    {form.countryCode === "+7" ? "10 ta raqam (9XX...)" : "9 ta raqam (XX...)"}
+                    {form.phone ? ` • ${form.phone.length}/${form.countryCode === "+7" ? 10 : 9}` : ""}
+                  </div>
+                </div>
               ) : null}
 
               <Field
@@ -496,6 +516,7 @@ function Sidebar({ view, setView, onLogout, user, mobileOpen, setMobileOpen }) {
     { id: "dashboard", label: "Bosh sahifa", icon: Home },
     { id: "leaderboard", label: "Reyting", icon: Trophy },
     { id: "code", label: "AI Code Lab", icon: Code2 },
+    { id: "competitions", label: "Musobaqalar", icon: Users },
     { id: "profile", label: "Profil & Portfolio", icon: User },
     { id: "content", label: "Yangiliklar & Tadbirlar", icon: CalendarDays },
     { id: "messages", label: "Xabarlar", icon: MessageSquare },
@@ -987,10 +1008,11 @@ function LeaderboardView({ toast, onOpenProfile }) {
           value={province}
           onChange={(e) => setProvince(e.target.value)}
           className="rounded-xl border border-white/10 bg-[#0d0f17] px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500"
+          style={{ colorScheme: "dark" }}
         >
-          <option value="all">Barcha hududlar</option>
+          <option value="all" className="bg-[#0d0f17] text-white">Barcha hududlar</option>
           {PROVINCES.map((p) => (
-            <option key={p} value={p}>
+            <option key={p} value={p} className="bg-[#0d0f17] text-white">
               {p}
             </option>
           ))}
@@ -1210,14 +1232,36 @@ function CodeLabView({ toast, refreshUser }) {
           ) : (
             <div className="grid md:grid-cols-2 gap-4">
               {challenges.map((item) => (
-                <Glass key={item.id} onClick={() => openChallenge(item)} className="p-5">
+                <Glass
+                  key={item.id}
+                  onClick={() => !item.locked && openChallenge(item)}
+                  className={cn(
+                    "p-5 transition",
+                    item.completed
+                      ? "border-emerald-500/30 bg-emerald-500/[0.06]"
+                      : item.locked
+                        ? "opacity-50 cursor-not-allowed border-white/5"
+                        : ""
+                  )}
+                >
                   <div className="flex justify-between items-start">
-                    <span className={cn(
-                      "text-[10px] font-black uppercase px-2 py-0.5 rounded-full border",
-                      item.type === "QUIZ" ? "bg-amber-500/10 text-amber-300 border-amber-500/20" : "bg-cyan-500/10 text-cyan-300 border-cyan-500/20"
-                    )}>
-                      {item.type}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={cn(
+                        "text-[10px] font-black uppercase px-2 py-0.5 rounded-full border",
+                        item.type === "QUIZ" ? "bg-amber-500/10 text-amber-300 border-amber-500/20" : "bg-cyan-500/10 text-cyan-300 border-cyan-500/20"
+                      )}>
+                        {item.type}
+                      </span>
+                      <span className={cn(
+                        "text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border",
+                        item.difficulty?.toLowerCase() === "easy" ? "bg-green-500/10 text-green-300 border-green-500/20"
+                          : item.difficulty?.toLowerCase() === "medium" ? "bg-yellow-500/10 text-yellow-300 border-yellow-500/20"
+                          : item.difficulty?.toLowerCase() === "hard" ? "bg-orange-500/10 text-orange-300 border-orange-500/20"
+                          : "bg-red-500/10 text-red-300 border-red-500/20"
+                      )}>
+                        {item.difficulty}
+                      </span>
+                    </div>
                     <span className="text-xs font-bold text-amber-400">{item.points} pts</span>
                   </div>
 
@@ -1226,7 +1270,17 @@ function CodeLabView({ toast, refreshUser }) {
 
                   <div className="mt-4 flex items-center justify-between pt-3 border-t border-white/[0.06] text-[10px] text-slate-500 font-medium">
                     <span className="capitalize">{item.difficulty} • {item.language}</span>
-                    <span className="text-violet-400 font-bold">Ochish →</span>
+                    {item.completed ? (
+                      <span className="text-emerald-400 font-bold flex items-center gap-1">
+                        <Check size={12} /> Bajarilgan
+                      </span>
+                    ) : item.locked ? (
+                      <span className="text-slate-600 font-bold flex items-center gap-1">
+                        🔒 Qulflangan
+                      </span>
+                    ) : (
+                      <span className="text-violet-400 font-bold">Ochish →</span>
+                    )}
                   </div>
                 </Glass>
               ))}
@@ -1708,10 +1762,11 @@ function ProfileModal({ user, onClose, toast, refreshUser }) {
             <select
               value={form.province}
               onChange={(e) => setForm({ ...form, province: e.target.value })}
-              className="w-full rounded-xl border border-white/10 bg-white/[0.02] px-3.5 py-2.5 text-xs text-white outline-none"
+              className="w-full rounded-xl border border-white/10 bg-[#111320] px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500"
+              style={{ colorScheme: "dark" }}
             >
               {PROVINCES.map((p) => (
-                <option key={p} value={p}>{p}</option>
+                <option key={p} value={p} className="bg-[#111320] text-white">{p}</option>
               ))}
             </select>
           </label>
@@ -1871,6 +1926,166 @@ function ProjectModal({ project, onClose, toast, refreshUser }) {
   );
 }
 
+// ----------------- COMPETITIONS VIEW -----------------
+function CompetitionsView({ toast, user }) {
+  const [competitions, setCompetitions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedComp, setSelectedComp] = useState(null);
+  const [joining, setJoining] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.get("/api/competitions");
+      setCompetitions(res.data?.items || []);
+    } catch (err) {
+      toast("error", "Xatolik", apiMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function joinCompetition(compId, teamId) {
+    setJoining(true);
+    try {
+      const res = await api.post(`/api/competitions/${compId}/join`, { teamId });
+      toast("success", "Muvaffaqiyat!", res.data?.message || "Jamoaga qo'shildingiz!");
+      await load();
+    } catch (err) {
+      toast("error", "Xato", apiMessage(err));
+    } finally {
+      setJoining(false);
+    }
+  }
+
+  const statusLabel = (s) => {
+    if (s === "ACTIVE") return { text: "Faol", color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" };
+    if (s === "UPCOMING") return { text: "Rejalashtirilgan", color: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20" };
+    return { text: "Yakunlangan", color: "text-slate-400 bg-slate-500/10 border-slate-500/20" };
+  };
+
+  if (selectedComp) {
+    const comp = selectedComp;
+    const myTeam = comp.teams?.find(t => t.members?.some(m => m.userId === user?.id));
+
+    return (
+      <div className="space-y-6 animate-in fade-in duration-300">
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={() => setSelectedComp(null)} className="p-2 rounded-xl hover:bg-white/[0.04] text-slate-400">
+            <ArrowLeft size={18} />
+          </button>
+          <div>
+            <h2 className="text-xl font-black text-white">{comp.title}</h2>
+            <p className="text-xs text-slate-400">{comp.description}</p>
+          </div>
+        </div>
+
+        {comp.rules && (
+          <Glass className="p-5">
+            <div className="text-xs font-bold text-violet-400 mb-2">Qoidalar</div>
+            <div className="text-xs text-slate-300 leading-5">{comp.rules}</div>
+          </Glass>
+        )}
+
+        <div className="grid gap-4">
+          <div className="flex items-center gap-2 text-sm font-bold text-white">
+            <Users size={18} className="text-violet-400" />
+            <span>Jamoalar ({comp.teams?.length || 0})</span>
+          </div>
+
+          {(comp.teams || []).map((team) => {
+            const isMine = team.members?.some(m => m.userId === user?.id);
+            return (
+              <Glass key={team.id} className={cn("p-5", isMine && "border-violet-500/30 bg-violet-500/[0.04]")}>
+                <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{team.avatar || "🏆"}</span>
+                    <div>
+                      <h4 className="font-bold text-white text-sm">{team.name}</h4>
+                      <span className="text-[10px] text-slate-400">{team.members?.length || 0} a'zo • Ball: {team.score}</span>
+                    </div>
+                    {isMine && <span className="text-[10px] font-bold text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded-full">Sizning jamoangiz</span>}
+                  </div>
+                  {!myTeam && comp.status !== "COMPLETED" && (
+                    <button
+                      type="button"
+                      disabled={joining}
+                      onClick={() => joinCompetition(comp.id, team.id)}
+                      className="text-xs font-bold text-white bg-violet-600 hover:bg-violet-500 px-4 py-2 rounded-xl transition disabled:opacity-50"
+                    >
+                      Qo'shilish
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {(team.members || []).map((m) => (
+                    <div key={m.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-cyan-400 flex items-center justify-center text-[10px] font-bold text-white">
+                        {m.user?.name?.charAt(0) || "?"}
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-bold text-white">{m.user?.name}</div>
+                        <div className="text-[9px] text-slate-500">Lv.{m.user?.level} • {m.user?.score} pts</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Glass>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300">
+      <Header
+        eyebrow="Jamoaviy"
+        title="Musobaqalar"
+        subtitle="Jamoalar bo'lib bellashing va o'z mahoratingizni namoyish eting."
+        action={<Button variant="secondary" onClick={load} icon={RefreshCw}>Yangilash</Button>}
+      />
+
+      {loading ? (
+        <div className="py-16 text-center text-slate-500 text-xs">Yuklanmoqda...</div>
+      ) : competitions.length === 0 ? (
+        <Empty text="Hali musobaqalar yo'q" sub="Admin panel orqali yangi musobaqalar qo'shiladi." />
+      ) : (
+        <div className="grid gap-4">
+          {competitions.map((comp) => {
+            const st = statusLabel(comp.status);
+            const totalMembers = (comp.teams || []).reduce((acc, t) => acc + (t.members?.length || 0), 0);
+            return (
+              <Glass key={comp.id} onClick={() => setSelectedComp(comp)} className="p-5">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full border", st.color)}>{st.text}</span>
+                      <span className="text-[10px] text-slate-500 capitalize">{comp.category}</span>
+                    </div>
+                    <h4 className="font-bold text-white text-base">{comp.title}</h4>
+                    <p className="mt-1 text-xs text-slate-400 leading-5 line-clamp-2">{comp.description}</p>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center justify-between pt-3 border-t border-white/[0.06] text-[10px] text-slate-500 font-medium">
+                  <span>{comp.teams?.length || 0} jamoa • {totalMembers} ishtirokchi</span>
+                  <span className="text-xs text-slate-400">
+                    {new Date(comp.startsAt).toLocaleDateString("uz-UZ")} — {new Date(comp.endsAt).toLocaleDateString("uz-UZ")}
+                  </span>
+                  <span className="text-violet-400 font-bold">Batafsil →</span>
+                </div>
+              </Glass>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ----------------- CONTENT (NEWS & EVENTS) VIEW -----------------
 function ContentView({ toast }) {
   const [news, setNews] = useState([]);
@@ -1923,6 +2138,14 @@ function ContentView({ toast }) {
             <div className="space-y-3">
               {news.map((item) => (
                 <div key={item.id} className="p-4 rounded-xl border border-white/[0.04] bg-white/[0.01]">
+                  {item.imageUrl && (
+                    <img
+                      src={item.imageUrl}
+                      alt={item.title}
+                      className="w-full h-40 object-cover rounded-lg mb-3"
+                      onError={(e) => { e.target.style.display = "none"; }}
+                    />
+                  )}
                   <h4 className="font-bold text-white text-sm">{item.title}</h4>
                   <p className="mt-1 text-xs text-slate-400 leading-5">{item.summary}</p>
                   {item.sourceUrl ? (
@@ -2259,6 +2482,9 @@ function App() {
           refreshUser={refreshUser}
         />
       );
+    }
+    if (view === "competitions") {
+      return <CompetitionsView toast={toast} user={user} />;
     }
     if (view === "content") {
       return <ContentView toast={toast} />;
