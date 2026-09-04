@@ -7,7 +7,9 @@ import {
   AlertCircle,
   ArrowLeft,
   CalendarDays,
+  Camera,
   Check,
+  CheckCircle,
   ChevronDown,
   ChevronRight,
   Clock,
@@ -21,6 +23,7 @@ import {
   Layers3,
   LineChart,
   Loader2,
+  Lock,
   LogIn,
   LogOut,
   Menu,
@@ -31,20 +34,26 @@ import {
   RefreshCw,
   Rocket,
   Search,
+  Send,
   Shield,
+  ShieldAlert,
   Sparkles,
   Star,
   Terminal,
   Trash2,
   Trophy,
+  Upload,
   User,
   Users,
   WalletCards,
   X,
+  XCircle,
 } from "lucide-react";
 
-const API_URL = "https://devrank-backend-production.up.railway.app";
-const API_BASE_URL = API_URL || import.meta.env.VITE_API_URL || "https://devrank-backend-production.up.railway.app";
+const API_BASE_URL =
+  (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"))
+    ? "http://localhost:5000"
+    : (typeof process !== "undefined" && process.env?.REACT_APP_API_URL) || "https://devrank-backend-production.up.railway.app";
 
 const STORAGE = {
   token: "devrank_token",
@@ -235,7 +244,7 @@ function Avatar({ user, size = "md" }) {
       )}
     >
       {user?.avatar ? (
-        <img src={user.avatar.startsWith("http") ? user.avatar : `${API_BASE_URL}${user.avatar}`} alt={user.name} className="h-full w-full object-cover" />
+        <img src={user.avatar.startsWith("http") || user.avatar.startsWith("data:") ? user.avatar : `${API_BASE_URL}${user.avatar}`} alt={user.name} className="h-full w-full object-cover" />
       ) : (
         <span>{initials(user?.name)}</span>
       )}
@@ -1108,6 +1117,26 @@ function CodeLabView({ toast, refreshUser }) {
   const [quizAnswer, setQuizAnswer] = useState(null);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [challengeTimeLeft, setChallengeTimeLeft] = useState(null);
+
+  useEffect(() => {
+    if (!selected) {
+      setChallengeTimeLeft(null);
+      return;
+    }
+    const initial = selected.type === "QUIZ" ? 120 : (selected.difficulty === "hard" ? 900 : 600);
+    setChallengeTimeLeft(initial);
+
+    const timer = setInterval(() => {
+      setChallengeTimeLeft(t => {
+        if (t === null) return null;
+        if (t <= 1) return 0;
+        return t - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [selected]);
 
   const loadChallenges = useCallback(async () => {
     try {
@@ -1307,6 +1336,22 @@ function CodeLabView({ toast, refreshUser }) {
               <h3 className="text-xl font-bold text-white mt-1">{selected.title}</h3>
               <p className="mt-3 text-xs text-slate-300 leading-6 whitespace-pre-line">{selected.description}</p>
             </div>
+
+            {challengeTimeLeft !== null && (
+              <div className={cn(
+                "flex items-center justify-between p-3 rounded-xl border text-xs font-mono font-bold transition",
+                challengeTimeLeft > 30 ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" : "text-red-400 bg-red-500/10 border-red-500/20 animate-pulse"
+              )}>
+                <div className="flex items-center gap-1.5">
+                  <Clock size={14} />
+                  <span>{selected.type === "QUIZ" ? "Test vaqti (2 daqiqa):" : "Kod yozish vaqti (10 daqiqa):"}</span>
+                </div>
+                <span>
+                  {Math.floor(challengeTimeLeft / 60)}:{String(challengeTimeLeft % 60).padStart(2, "0")}
+                  {challengeTimeLeft === 0 && " (Vaqt tugadi!)"}
+                </span>
+              </div>
+            )}
 
             {selected.type === "QUIZ" ? (
               <div
@@ -1574,13 +1619,35 @@ function ProfileView({ user, own, toast, refreshUser }) {
       {/* Profile Hero Header */}
       <Glass className="p-6 sm:p-8 bg-gradient-to-br from-violet-950/20 via-[#0d0f17] to-transparent">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-          <Avatar user={user} size="xl" />
+          <div className="relative group shrink-0">
+            <Avatar user={user} size="xl" />
+            {own && (
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="absolute inset-0 rounded-xl bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition cursor-pointer"
+                title="Rasmni o‘zgartirish"
+              >
+                <Camera size={22} />
+              </button>
+            )}
+          </div>
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-3">
               <h2 className="text-2xl sm:text-3xl font-black text-white">{user.name}</h2>
               <span className="rounded-full bg-violet-500/20 border border-violet-500/30 px-3 py-0.5 text-xs font-bold text-violet-300">
                 Level {user.level}
               </span>
+              {user.telegram && (
+                <a
+                  href={user.telegram.startsWith("http") ? user.telegram : `https://t.me/${user.telegram.replace("@", "")}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 border border-cyan-500/20 px-3 py-1 rounded-full transition"
+                >
+                  <span>✈️</span> {user.telegram.startsWith("@") ? user.telegram : `@${user.telegram}`}
+                </a>
+              )}
             </div>
             <div className="text-xs sm:text-sm text-slate-400 mt-1">{user.role} • {user.province}</div>
             <p className="mt-3 text-xs sm:text-sm text-slate-300 max-w-2xl leading-6">
@@ -1612,81 +1679,87 @@ function ProfileView({ user, own, toast, refreshUser }) {
 
       {/* Portfolio Grid */}
       <Glass className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h3 className="text-lg font-bold text-white">Loyihalar & Portfolio</h3>
-            <p className="text-xs text-slate-400">Foydalanuvchi tomonidan yuklangan haqiqiy loyihalar</p>
-          </div>
-          {own ? (
-            <Button variant="secondary" onClick={() => setProjectModal({})} icon={Plus}>
-              Yangi loyiha
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-base font-bold text-white flex items-center gap-2">
+            <span>Portfolio Loyihalari</span>
+            <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-xs text-slate-400">
+              {user.projects?.length || 0}
+            </span>
+          </h3>
+          {own && (
+            <Button size="sm" onClick={() => setProjectModal({})} icon={Plus}>
+              Qo‘shish
             </Button>
-          ) : null}
+          )}
         </div>
 
         {!user.projects?.length ? (
-          <Empty
-            text="Hali loyihalar qo‘shilmagan"
-            sub="Portfolioingizni boyitish uchun birinchi loyihangizni qo'shing."
-            action={own ? <Button onClick={() => setProjectModal({})} icon={Plus}>Loyiha qo‘shish</Button> : null}
-          />
+          <Empty text="Portfolio loyihalari yo‘q" sub="Yangi loyiha qo‘shib o‘z darajangizni oshiring." />
         ) : (
           <div className="grid md:grid-cols-2 gap-4">
             {user.projects.map((p) => (
-              <div key={p.id} className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden flex flex-col justify-between">
-                {p.images?.[0]?.url ? (
-                  <div className="h-44 bg-black/40 overflow-hidden">
-                    <img src={p.images[0].url.startsWith("http") ? p.images[0].url : `${API_BASE_URL}${p.images[0].url}`} alt={p.title} className="w-full h-full object-cover" />
-                  </div>
-                ) : null}
-
-                <div className="p-5 flex-1 flex flex-col justify-between">
-                  <div>
-                    <h4 className="font-bold text-white text-base">{p.title}</h4>
-                    <p className="mt-1 text-xs text-slate-400 leading-5">{p.description}</p>
-
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {(p.technologies || []).map((t) => (
-                        <span key={t} className="rounded-lg bg-white/[0.04] border border-white/[0.06] px-2 py-0.5 text-[10px] text-slate-300">
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between">
-                    <div className="flex gap-3 text-xs">
-                      {p.githubUrl ? (
-                        <a href={p.githubUrl} target="_blank" rel="noreferrer" className="text-violet-400 hover:underline flex items-center gap-1">
-                          GitHub <ExternalLink size={11} />
-                        </a>
-                      ) : null}
-                      {p.liveUrl ? (
-                        <a href={p.liveUrl} target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline flex items-center gap-1">
-                          Demo <ExternalLink size={11} />
-                        </a>
-                      ) : null}
-                    </div>
-
-                    {own ? (
-                      <div className="flex gap-2">
-                        <button type="button" onClick={() => setProjectModal(p)} className="p-1.5 rounded text-slate-400 hover:text-white">
-                          <Pencil size={14} />
+              <Glass key={p.id} className="p-4 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-start justify-between">
+                    <h4 className="font-bold text-white text-sm">{p.title}</h4>
+                    {own && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setProjectModal(p)}
+                          className="p-1 rounded-lg hover:bg-white/[0.06] text-slate-400 hover:text-white"
+                        >
+                          <Pencil size={13} />
                         </button>
-                        <button type="button" onClick={() => deleteProject(p.id)} className="p-1.5 rounded text-red-400 hover:text-red-300">
-                          <Trash2 size={14} />
+                        <button
+                          type="button"
+                          onClick={() => deleteProject(p.id)}
+                          className="p-1 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400"
+                        >
+                          <Trash2 size={13} />
                         </button>
                       </div>
-                    ) : null}
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs text-slate-400 leading-5">{p.description}</p>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {p.technologies?.map((t) => (
+                      <span key={t} className="rounded-md bg-white/[0.04] px-2 py-0.5 text-[10px] text-slate-300">
+                        {t}
+                      </span>
+                    ))}
                   </div>
                 </div>
-              </div>
+
+                <div className="mt-4 flex items-center gap-2 pt-3 border-t border-white/[0.06]">
+                  {p.liveUrl && (
+                    <a
+                      href={p.liveUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-violet-400 hover:text-violet-300"
+                    >
+                      <ExternalLink size={12} /> Live Demo
+                    </a>
+                  )}
+                  {p.repoUrl && (
+                    <a
+                      href={p.repoUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-white"
+                    >
+                      <FileCode2 size={12} /> GitHub Repo
+                    </a>
+                  )}
+                </div>
+              </Glass>
             ))}
           </div>
         )}
       </Glass>
 
-      {/* Edit Profile Modal */}
+      {/* Modals */}
       {editing ? (
         <ProfileModal
           user={user}
@@ -1696,10 +1769,9 @@ function ProfileView({ user, own, toast, refreshUser }) {
         />
       ) : null}
 
-      {/* Add / Edit Project Modal */}
       {projectModal ? (
         <ProjectModal
-          project={projectModal}
+          project={projectModal.id ? projectModal : null}
           onClose={() => setProjectModal(null)}
           toast={toast}
           refreshUser={refreshUser}
@@ -1714,12 +1786,30 @@ function ProfileModal({ user, onClose, toast, refreshUser }) {
   const [form, setForm] = useState({
     name: user.name || "",
     phone: user.phone || "",
+    telegram: user.telegram || "",
     role: user.role || "Full Stack Developer",
     province: user.province || "Toshkent shahri",
     bio: user.bio || "",
     skills: (user.skills || []).join(", "),
+    avatar: user.avatar || "",
   });
   const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef(null);
+
+  function handleAvatarUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 3 * 1024 * 1024) {
+      toast("error", "Fayl juda katta", "Rasm hajmi 3MB dan oshmasligi kerak.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm((prev) => ({ ...prev, avatar: reader.result }));
+      toast("info", "Rasm tanlandi", "O‘zgarishlarni saqlash uchun 'Saqlash' tugmasini bosing.");
+    };
+    reader.readAsDataURL(file);
+  }
 
   async function save(e) {
     e.preventDefault();
@@ -1728,9 +1818,11 @@ function ProfileModal({ user, onClose, toast, refreshUser }) {
       await api.patch("/api/profile", {
         name: form.name.trim(),
         phone: form.phone.trim(),
+        telegram: form.telegram.trim(),
         role: form.role.trim(),
         province: form.province,
         bio: form.bio.trim(),
+        avatar: form.avatar || null,
         technologies: form.skills.split(",").map((s) => s.trim()).filter(Boolean),
       });
 
@@ -1746,7 +1838,7 @@ function ProfileModal({ user, onClose, toast, refreshUser }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-      <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-[#0d0f17] p-6 shadow-2xl space-y-4">
+      <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-[#0d0f17] p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center border-b border-white/[0.08] pb-3">
           <h3 className="text-lg font-bold text-white">Profilni tahrirlash</h3>
           <button type="button" onClick={onClose} className="text-slate-400 hover:text-white">
@@ -1755,6 +1847,50 @@ function ProfileModal({ user, onClose, toast, refreshUser }) {
         </div>
 
         <form onSubmit={save} className="space-y-3.5">
+          {/* Avatar Upload Box */}
+          <div className="flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/10">
+            <div className="relative group shrink-0">
+              <Avatar user={{ ...user, avatar: form.avatar, name: form.name }} size="lg" />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute inset-0 rounded-xl bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition cursor-pointer"
+                title="Rasm yuklash"
+              >
+                <Camera size={18} />
+              </button>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-bold text-white mb-1">Profil rasmi (Avatar)</div>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-3 py-1.5 rounded-lg bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-semibold transition flex items-center gap-1.5"
+                >
+                  <Upload size={13} /> Kompyuterdan rasm yuklash
+                </button>
+                {form.avatar && (
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, avatar: "" }))}
+                    className="px-2.5 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-300 text-xs transition"
+                  >
+                    O‘chirish
+                  </button>
+                )}
+              </div>
+              <div className="text-[10px] text-slate-500 mt-1">PNG, JPG yoki WebP (max 3MB)</div>
+            </div>
+          </div>
+
           <Field label="Ism Familiya" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
           <Field label="Kasbiy rolingiz" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} required />
 
@@ -1772,7 +1908,15 @@ function ProfileModal({ user, onClose, toast, refreshUser }) {
             </select>
           </label>
 
-          <Field label="Telefon" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          <div className="grid sm:grid-cols-2 gap-3">
+            <Field label="Telefon" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+            <Field
+              label="Telegram username"
+              placeholder="@username"
+              value={form.telegram}
+              onChange={(e) => setForm({ ...form, telegram: e.target.value })}
+            />
+          </div>
 
           <label className="block">
             <div className="mb-1 text-xs text-slate-400 font-medium">Bio (qisqacha o'zingiz haqingizda)</div>
@@ -1990,6 +2134,340 @@ function LiveTimerBox({ targetDate, label = "Musobaqa boshlanishiga qolgan vaqt"
   );
 }
 
+// ----------------- CELEBRATION SOUND & SNOW -----------------
+function playCelebrationFanfare() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const notes = [
+      { f: 523.25, d: 0.15, wait: 0 },     // C5
+      { f: 659.25, d: 0.15, wait: 0.15 },  // E5
+      { f: 783.99, d: 0.2, wait: 0.3 },    // G5
+      { f: 1046.50, d: 0.45, wait: 0.5 },  // C6
+      // Pop celebratory notes (paqq paqqq!)
+      { f: 880, d: 0.08, wait: 0.95, type: "triangle" },
+      { f: 1174, d: 0.1, wait: 1.08, type: "triangle" },
+      { f: 1318, d: 0.12, wait: 1.22, type: "triangle" },
+      { f: 1567, d: 0.4, wait: 1.38, type: "sine" },
+    ];
+    notes.forEach((n) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = n.type || "sine";
+      osc.frequency.setValueAtTime(n.f, ctx.currentTime + n.wait);
+      gain.gain.setValueAtTime(0.001, ctx.currentTime + n.wait);
+      gain.gain.exponentialRampToValueAtTime(0.28, ctx.currentTime + n.wait + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + n.wait + n.d);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + n.wait);
+      osc.stop(ctx.currentTime + n.wait + n.d);
+    });
+  } catch (e) {
+    console.warn("Audio fanfare error:", e);
+  }
+}
+
+function CelebrationSnow() {
+  const emojis = ["🎉", "🏆", "⭐", "🎈", "🥇", "✨", "🎊", "🌟"];
+  const flakes = Array.from({ length: 42 }, (_, i) => ({
+    id: i,
+    emoji: emojis[i % emojis.length],
+    left: `${(i * 2.4 + (i % 7) * 3) % 100}%`,
+    delay: `${(i * 0.12) % 3.6}s`,
+    duration: `${2.8 + (i % 4)}s`,
+    size: `${18 + (i % 14)}px`
+  }));
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+      <style>{`
+        @keyframes devrankSnow {
+          0% { transform: translateY(-50px) rotate(0deg); opacity: 1; }
+          100% { transform: translateY(105vh) rotate(360deg); opacity: 0.15; }
+        }
+      `}</style>
+      {flakes.map((f) => (
+        <div
+          key={f.id}
+          className="absolute select-none"
+          style={{
+            left: f.left,
+            top: "-50px",
+            fontSize: f.size,
+            animation: `devrankSnow ${f.duration} linear infinite`,
+            animationDelay: f.delay
+          }}
+        >
+          {f.emoji}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ----------------- COMPETITION RESULTS MODAL -----------------
+function CompetitionResultsModal({ compId, onClose, user, toast }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [contactForm, setContactForm] = useState({
+    phone: user?.phone || "",
+    telegram: user?.telegram || "",
+  });
+  const [contactSubmitted, setContactSubmitted] = useState(false);
+  const [submittingContact, setSubmittingContact] = useState(false);
+
+  useEffect(() => {
+    async function fetchResults() {
+      setLoading(true);
+      try {
+        const res = await api.get(`/api/competitions/${compId}/results`);
+        setData(res.data);
+        if (res.data?.isWinner && res.data?.showResults) {
+          playCelebrationFanfare();
+        }
+      } catch (err) {
+        toast("error", "Natijalar xatosi", apiMessage(err));
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchResults();
+  }, [compId, toast]);
+
+  async function submitWinnerContact(e) {
+    e.preventDefault();
+    if (!contactForm.phone.trim() || !contactForm.telegram.trim()) {
+      toast("warning", "Diqqat", "Telefon va Telegram username kiriting!");
+      return;
+    }
+    setSubmittingContact(true);
+    try {
+      await api.post(`/api/competitions/${compId}/winner-contact`, {
+        phone: contactForm.phone.trim(),
+        telegram: contactForm.telegram.trim(),
+      });
+      setContactSubmitted(true);
+      toast("success", "Ma'lumotlar saqlandi", "Diplom berish uchun ma'lumotlaringiz adminlarga yetkazildi!");
+    } catch (err) {
+      toast("error", "Xatolik", apiMessage(err));
+    } finally {
+      setSubmittingContact(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 overflow-y-auto">
+      {data?.isWinner && data?.showResults && <CelebrationSnow />}
+
+      <div className="w-full max-w-3xl rounded-3xl border border-white/10 bg-[#0d0f17] p-6 sm:p-8 shadow-2xl space-y-6 max-h-[92vh] overflow-y-auto relative">
+        <div className="flex justify-between items-center border-b border-white/[0.08] pb-4">
+          <div className="flex items-center gap-2">
+            <Trophy className="text-amber-400" size={22} />
+            <h3 className="text-lg sm:text-xl font-black text-white">Musobaqa Yakuniy Natijalari</h3>
+          </div>
+          <button type="button" onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/[0.06] transition">
+            <X size={18} />
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="py-16 text-center text-slate-400 text-sm animate-pulse">
+            Natijalar yuklanmoqda...
+          </div>
+        ) : !data?.showResults ? (
+          <div className="p-8 text-center space-y-3 rounded-2xl bg-white/[0.02] border border-white/10">
+            <div className="text-3xl">⏳</div>
+            <h4 className="text-base font-bold text-white">Natijalar e'lon qilinishi kutilmoqda</h4>
+            <p className="text-xs text-slate-400 max-w-md mx-auto leading-5">
+              Hakamlar va adminlar tomonidan musobaqa natijalari tekshirilmoqda. Natijalar tez orada e'lon qilinadi.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* WINNER BANNER */}
+            {data.isWinner && (
+              <div className="p-6 rounded-2xl bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-600/20 border border-amber-500/40 text-center space-y-2 relative overflow-hidden shadow-[0_0_40px_rgba(245,158,11,0.25)] animate-in zoom-in-95 duration-300">
+                <div className="text-4xl animate-bounce">🏆🥇🎉</div>
+                <h4 className="text-2xl font-black text-amber-300 tracking-wide">1-O'RIN! TABRIKLAYMIZ!</h4>
+                <p className="text-xs text-amber-200/90 max-w-lg mx-auto leading-5">
+                  Sizning jamoangiz musobaqaning mutlaq g'olibi bo'ldi! Qobiliyatingiz va jamoaviy birligingiz uchun chin dildan qutlaymiz!
+                </p>
+              </div>
+            )}
+
+            {/* DIPLOMA / WINNER CONTACT FORM */}
+            {data.isWinner && (
+              <div className="p-5 rounded-2xl bg-violet-600/10 border border-violet-500/30 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">🎓</span>
+                  <h5 className="text-sm font-bold text-white">G'oliblik diplomi & sertifikat topshirish</h5>
+                </div>
+                <p className="text-xs text-slate-300 leading-5">
+                  G'olib bo'lganingiz uchun rasmiy diplom berish maqsadida aloqa ma'lumotlaringizni kiriting:
+                </p>
+                {contactSubmitted ? (
+                  <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-center gap-2 font-semibold">
+                    <CheckCircle size={16} /> Ma'lumotlaringiz qabul qilindi! Tashkilotchilar tez orada siz bilan bog'lanishadi.
+                  </div>
+                ) : (
+                  <form onSubmit={submitWinnerContact} className="grid sm:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+                    <div>
+                      <label className="block text-[11px] text-slate-400 mb-1 font-medium">Telefon raqamingiz</label>
+                      <input
+                        type="text"
+                        value={contactForm.phone}
+                        onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+                        placeholder="+998 90 123 45 67"
+                        className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-slate-400 mb-1 font-medium">Telegram username</label>
+                      <input
+                        type="text"
+                        value={contactForm.telegram}
+                        onChange={(e) => setContactForm({ ...contactForm, telegram: e.target.value })}
+                        placeholder="@username"
+                        className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500"
+                        required
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={submittingContact}
+                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs transition disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-lg shadow-amber-500/20"
+                    >
+                      <Send size={13} /> {submittingContact ? "Yuborilmoqda..." : "Yuborish"}
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
+
+            {/* LEADERBOARD TABLE */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+                <span>Jamoalar Reytingi (Leaderboard)</span>
+                <span className="text-[10px] text-slate-500">To'plangan ballar asosida</span>
+              </div>
+              <div className="space-y-2">
+                {(data.leaderboard || []).map((t) => {
+                  const rankIcons = ["🥇 1-o'rin", "🥈 2-o'rin", "🥉 3-o'rin"];
+                  const rankLabel = rankIcons[t.rank - 1] || `${t.rank}-o'rin`;
+
+                  return (
+                    <div
+                      key={t.id}
+                      className={cn(
+                        "flex items-center justify-between p-4 rounded-xl border transition",
+                        t.isWinner
+                          ? "border-amber-500/40 bg-amber-500/[0.08]"
+                          : t.isMyTeam
+                            ? "border-violet-500/40 bg-violet-500/[0.08]"
+                            : "border-white/10 bg-white/[0.02]"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className={cn(
+                          "px-2.5 py-1 rounded-lg text-xs font-black font-mono",
+                          t.rank === 1 ? "bg-amber-500 text-slate-950 font-extrabold" :
+                          t.rank === 2 ? "bg-slate-300 text-slate-950" :
+                          t.rank === 3 ? "bg-amber-700 text-white" :
+                          "bg-white/10 text-slate-400"
+                        )}>
+                          {rankLabel}
+                        </span>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h5 className="font-bold text-white text-sm">{t.name}</h5>
+                            {t.isMyTeam && (
+                              <span className="text-[10px] font-bold text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded-full">
+                                Sizning jamoangiz
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-slate-400 mt-0.5">
+                            {t.memberCount} nafar a'zo • {t.members?.map(m => m.name).join(", ")}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-base font-black text-amber-400 font-mono">{t.score} pts</div>
+                        <div className="text-[10px] text-slate-500 font-mono">Umumiy ball</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* TEAM MISTAKES BREAKDOWN */}
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h5 className="text-xs font-bold text-white">Jamoangiz Xatoliklari & Yechimlari Tahlili</h5>
+                  <p className="text-[10px] text-slate-400">Faqat sizning jamoangiz bergan javoblar tahlili (boshqa jamoalar yechimlari maxfiy)</p>
+                </div>
+                <span className="text-xs font-mono text-slate-400">
+                  {data.myTeamMistakes?.length || 0} ta berilgan javob
+                </span>
+              </div>
+
+              {!data.myTeamMistakes?.length ? (
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/10 text-center text-xs text-slate-500">
+                  Jamoangiz bu musobaqada javob topshirmagan.
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                  {data.myTeamMistakes.map((m, idx) => (
+                    <div
+                      key={idx}
+                      className={cn(
+                        "p-3 rounded-xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2",
+                        m.isCorrect
+                          ? "border-emerald-500/30 bg-emerald-500/[0.04]"
+                          : "border-red-500/30 bg-red-500/[0.04]"
+                      )}
+                    >
+                      <div className="flex items-start gap-2.5 min-w-0">
+                        <span className={cn(
+                          "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5",
+                          m.isCorrect ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"
+                        )}>
+                          {m.isCorrect ? "✓" : "✗"}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-white truncate">
+                            #{m.questionNumber}: {m.questionText}
+                          </div>
+                          <div className="text-[11px] text-slate-400 mt-0.5">
+                            Javob berdi: <strong className="text-slate-300">{m.answeredBy}</strong> • Javob: <span className="font-mono text-slate-300 italic">"{m.userAnswer}"</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className={cn(
+                          "text-[10px] font-bold px-2 py-0.5 rounded-full",
+                          m.isCorrect ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/20" : "bg-red-500/15 text-red-300 border border-red-500/20"
+                        )}>
+                          {m.isCorrect ? `+${m.points} ball` : "0 ball (Xato)"}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ----------------- COMPETITION ARENA (50 QUESTIONS) -----------------
 function CompetitionArena({ compId, onBack, toast, user }) {
   const [data, setData] = useState(null);
@@ -1998,14 +2476,26 @@ function CompetitionArena({ compId, onBack, toast, user }) {
   const [selectedAns, setSelectedAns] = useState("");
   const [codeAns, setCodeAns] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [isDisqualified, setIsDisqualified] = useState(false);
+  const [disqualifiedReason, setDisqualifiedReason] = useState("");
+  const [questionTimeLeft, setQuestionTimeLeft] = useState(60);
 
   const loadArena = useCallback(async () => {
     try {
       const res = await api.get(`/api/competitions/${compId}/questions`);
       setData(res.data);
+      if (res.data?.disqualified) {
+        setIsDisqualified(true);
+        setDisqualifiedReason(res.data.reason || "Chetlatilgan");
+      }
     } catch (err) {
-      toast("error", "Xatolik", apiMessage(err));
-      onBack();
+      if (err.response?.status === 403 && err.response?.data?.disqualified) {
+        setIsDisqualified(true);
+        setDisqualifiedReason(err.response.data.reason || "Chetlatilgan");
+      } else {
+        toast("error", "Xatolik", apiMessage(err));
+        onBack();
+      }
     } finally {
       setLoading(false);
     }
@@ -2013,8 +2503,97 @@ function CompetitionArena({ compId, onBack, toast, user }) {
 
   useEffect(() => { loadArena(); }, [loadArena]);
 
+  // Request Fullscreen on entering arena
+  useEffect(() => {
+    const enterFullscreen = async () => {
+      try {
+        if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+        }
+      } catch (err) {
+        console.warn("Fullscreen request:", err);
+      }
+    };
+    enterFullscreen();
+  }, []);
+
+  // Anti-Cheat: trigger disqualification if tab switched, window blurred, or full screen exited
+  const triggerDisqualification = useCallback(async (reason) => {
+    if (isDisqualified) return;
+    setIsDisqualified(true);
+    setDisqualifiedReason(reason);
+    try {
+      await api.post(`/api/competitions/${compId}/disqualify`, { reason });
+      toast("error", "Musobaqadan chetlatildingiz!", reason);
+    } catch (err) {
+      console.warn("Disqualify report error:", err);
+    }
+    if (document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    }
+  }, [compId, isDisqualified, toast]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && !isDisqualified) {
+        triggerDisqualification("Boshqa oynaga/tabga o'tish aniqlandi!");
+      }
+    };
+
+    const handleWindowBlur = () => {
+      if (!isDisqualified) {
+        triggerDisqualification("Brauzer oynasi faolligi yo'qotildi (boshqa oynaga o'tildi)!");
+      }
+    };
+
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && !isDisqualified) {
+        triggerDisqualification("To'liq ekran (Fullscreen) rejimidan chiqildi!");
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleWindowBlur);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleWindowBlur);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, [triggerDisqualification, isDisqualified]);
+
   const questions = data?.questions || [];
   const currentQ = questions[activeIdx] || null;
+
+  // Per-Question Countdown Timer (60s for Quiz, 300s / 5 min for Code)
+  useEffect(() => {
+    if (!currentQ || isDisqualified) return;
+    const initialTime = currentQ.type === "CODE" ? 300 : 60;
+    setQuestionTimeLeft(initialTime);
+
+    const timer = setInterval(() => {
+      setQuestionTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [activeIdx, currentQ?.id, currentQ?.type, isDisqualified]);
+
+  // Handle Question Time Expiration
+  useEffect(() => {
+    if (questionTimeLeft === 0 && currentQ && currentQ.status !== "SOLVED") {
+      toast("warning", "Vaqt tugadi", `Savol #${currentQ.orderIndex} uchun belgilangan vaqt tugadi!`);
+      if (activeIdx < questions.length - 1) {
+        setActiveIdx((i) => i + 1);
+      }
+    }
+  }, [questionTimeLeft, activeIdx, currentQ, questions.length, toast]);
 
   useEffect(() => {
     if (currentQ) {
@@ -2024,7 +2603,7 @@ function CompetitionArena({ compId, onBack, toast, user }) {
   }, [activeIdx, currentQ]);
 
   async function submitAnswer(ansValue) {
-    if (!currentQ || submitting) return;
+    if (!currentQ || submitting || isDisqualified) return;
     const finalAnswer = ansValue || (currentQ.type === "QUIZ" ? selectedAns : codeAns);
     if (!finalAnswer) {
       toast("warning", "Diqqat", "Javobni tanlang yoki yozing!");
@@ -2033,7 +2612,10 @@ function CompetitionArena({ compId, onBack, toast, user }) {
 
     setSubmitting(true);
     try {
-      const res = await api.post(`/api/competitions/${compId}/questions/${currentQ.id}/answer`, { answer: finalAnswer });
+      const res = await api.post(`/api/competitions/${compId}/questions/${currentQ.id}/answer`, {
+        answer: finalAnswer,
+        currentQuestionIndex: activeIdx + 1,
+      });
       if (res.data.correct) {
         toast("success", "Barakalla!", res.data.message);
       } else {
@@ -2047,10 +2629,39 @@ function CompetitionArena({ compId, onBack, toast, user }) {
     }
   }
 
+  // DISQUALIFIED SCREEN
+  if (isDisqualified) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center p-6 animate-in zoom-in-95 duration-200">
+        <div className="max-w-md w-full rounded-3xl border border-red-500/30 bg-gradient-to-b from-red-950/40 via-[#0d0f17] to-[#07080e] p-8 text-center space-y-4 shadow-[0_0_60px_rgba(239,68,68,0.25)]">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400">
+            <ShieldAlert size={34} />
+          </div>
+          <h3 className="text-xl font-black text-white">Musobaqadan Chetlatildingiz!</h3>
+          <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-300 leading-5">
+            <strong>Sabab:</strong> {disqualifiedReason || "Boshqa oynaga o'tish yoki to'liq ekrandan chiqish qoidabuzarligi aniqlandi."}
+          </div>
+          <p className="text-xs text-slate-400 leading-5">
+            DevRank musobaqalarida halollik qat'iy nazorat qilinadi. Boshqa ilovaga yoki tabga o'tish qat'iyan taqiqlangan.
+            <br /><br />
+            <span className="text-amber-400 font-semibold">Qayta kirish imkoniyati faqat admin tomonidan ruxsat berilgandan so'ng ochiladi.</span>
+          </p>
+          <button
+            type="button"
+            onClick={onBack}
+            className="w-full py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition"
+          >
+            Musobaqalar ro'yxatiga qaytish
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="py-20 text-center text-slate-400 text-sm animate-pulse">
-        Musobaqa savollari yuklanmoqda (50 ta savol)...
+        Musobaqa maydoni yuklanmoqda (50 ta savol)...
       </div>
     );
   }
@@ -2062,7 +2673,7 @@ function CompetitionArena({ compId, onBack, toast, user }) {
   const isEnded = new Date(data.competition.endsAt) <= new Date();
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-6 animate-in fade-in duration-300 select-none">
       {/* Top Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -2074,6 +2685,9 @@ function CompetitionArena({ compId, onBack, toast, user }) {
               <h2 className="text-xl font-black text-white">{data.competition.title}</h2>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/20">
                 50 ta Savol Maydoni
+              </span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                <Shield size={10} /> Anti-Cheat Faol
               </span>
             </div>
             <p className="text-xs text-slate-400">Jamoangiz: <strong className="text-white">{data.team.name}</strong> • Ball: <strong className="text-amber-400">{data.team.score} pts</strong></p>
@@ -2103,23 +2717,31 @@ function CompetitionArena({ compId, onBack, toast, user }) {
         <LiveTimerBox targetDate={data.competition.endsAt} label="Musobaqa yakunlanishiga qolgan vaqt" isLive={true} />
       ) : (
         <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs font-bold text-center">
-          Musobaqa yakunlangan. Natijalar hisoblanmoqda!
+          Musobaqa yakunlangan. Natijalar e'lon qilinmoqda!
         </div>
       )}
 
-      {/* Round-Robin Turn Notice */}
-      <div className="p-3 rounded-xl border border-violet-500/20 bg-violet-500/[0.03] text-xs text-slate-300 flex items-center gap-2">
-        <span className="text-violet-400">🎯</span>
-        <span>
-          <strong>Jamoaviy taqsimot:</strong> Savollar jamoa a'zolari o'rtasida navbatma-navbat taqsimlangan. Binafsha hoshiyali savollar — aynan sizga mo'ljallangan!
-        </span>
+      {/* Round-Robin Turn Notice & Anti-Cheat Notice */}
+      <div className="grid sm:grid-cols-2 gap-3">
+        <div className="p-3 rounded-xl border border-violet-500/20 bg-violet-500/[0.03] text-xs text-slate-300 flex items-center gap-2">
+          <span className="text-violet-400">🎯</span>
+          <span>
+            <strong>Jamoaviy navbat:</strong> Binafsha hoshiyali savollar — aynan sizga biriktirilgan!
+          </span>
+        </div>
+        <div className="p-3 rounded-xl border border-red-500/20 bg-red-500/[0.03] text-xs text-red-300 flex items-center gap-2">
+          <span className="text-red-400">⚠️</span>
+          <span>
+            <strong>Anti-Cheat:</strong> Boshqa oynaga/tabga o'tish yoki to'liq ekrandan chiqish chetlatishga olib keladi!
+          </span>
+        </div>
       </div>
 
       {/* Question Selector Bar (1 to 50) */}
       <Glass className="p-4">
         <div className="text-xs font-bold text-slate-300 mb-2 flex items-center justify-between">
           <span>Savollar xaritasi (50 ta)</span>
-          <span className="text-[10px] text-slate-400">1-20: Oson | 21-35: O'rta | 36-45: Qiyin | 46-50: Kod</span>
+          <span className="text-[10px] text-slate-400">1-20: Oson (60s) | 21-35: O'rta (60s) | 36-45: Qiyin (60s) | 46-50: Kod (300s)</span>
         </div>
         <div className="grid grid-cols-10 sm:grid-cols-12 md:grid-cols-16 lg:grid-cols-25 gap-1.5">
           {questions.map((q, idx) => {
@@ -2154,7 +2776,7 @@ function CompetitionArena({ compId, onBack, toast, user }) {
 
       {/* Active Question Box */}
       {currentQ && (
-        <Glass className="p-6 space-y-5">
+        <Glass className="p-6 space-y-5" onCopy={(e) => e.preventDefault()} onContextMenu={(e) => e.preventDefault()}>
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] pb-4">
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono font-bold text-white bg-white/10 px-2.5 py-1 rounded-lg">
@@ -2172,7 +2794,20 @@ function CompetitionArena({ compId, onBack, toast, user }) {
               <span className="text-xs font-bold text-amber-400 font-mono">+{currentQ.points} ball</span>
             </div>
 
-            <div className="flex items-center gap-2">
+            {/* Per-Question Live Countdown Timer */}
+            <div className="flex items-center gap-3">
+              {currentQ.status !== "SOLVED" && isStarted && !isEnded && (
+                <div className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-xl border font-mono text-xs font-bold transition",
+                  questionTimeLeft > 15
+                    ? "text-cyan-300 bg-cyan-500/10 border-cyan-500/20"
+                    : "text-red-400 bg-red-500/15 border-red-500/30 animate-pulse"
+                )}>
+                  <Clock size={13} />
+                  <span>Savol vaqti: {Math.floor(questionTimeLeft / 60)}:{String(questionTimeLeft % 60).padStart(2, "0")}</span>
+                </div>
+              )}
+
               {currentQ.status === "SOLVED" ? (
                 <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg flex items-center gap-1">
                   <Check size={13} /> Jamoa yechdi ({currentQ.solvedInfo?.answeredBy})
@@ -2231,7 +2866,7 @@ function CompetitionArena({ compId, onBack, toast, user }) {
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between text-xs text-slate-400">
                 <span>Dasturlash tili: <strong className="text-white uppercase">{currentQ.language || "JavaScript"}</strong></span>
-                <span className="text-red-400 font-bold">Ekstremal Daraja (150 ball)</span>
+                <span className="text-red-400 font-bold">Ekstremal Daraja (150 ball) • 5 daqiqa vaqt</span>
               </div>
               <textarea
                 rows={8}
@@ -2290,6 +2925,7 @@ function CompetitionsView({ toast, user }) {
   const [selectedComp, setSelectedComp] = useState(null);
   const [joining, setJoining] = useState(false);
   const [inArena, setInArena] = useState(false);
+  const [showResultsModal, setShowResultsModal] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -2368,12 +3004,22 @@ function CompetitionsView({ toast, user }) {
         ) : !isEnded ? (
           <LiveTimerBox targetDate={comp.endsAt} label="Jonli Musobaqa Ketmoqda — Yakunlanishiga qolgan vaqt" isLive={true} />
         ) : (
-          <div className="p-4 rounded-xl bg-slate-500/10 border border-slate-500/20 text-slate-400 text-xs font-bold text-center">
-            Musobaqa yakunlangan
+          <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-amber-300 text-xs font-bold">
+              <Trophy size={18} className="text-amber-400" />
+              <span>Musobaqa yakunlangan. G'oliblar va jamoalar natijalari aniqlandi!</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowResultsModal(comp.id)}
+              className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition flex items-center gap-2 shadow-lg shadow-amber-500/20"
+            >
+              <Trophy size={14} /> Natijalarni ko'rish
+            </button>
           </div>
         )}
 
-        {/* Action Button to Enter 50 Questions Arena */}
+        {/* Action Button to Enter 50 Questions Arena - STRICTLY LOCKED BEFORE START TIME */}
         {myTeam && (
           <div className="p-5 rounded-2xl border border-violet-500/40 bg-gradient-to-r from-violet-600/20 via-purple-600/20 to-cyan-600/20 backdrop-blur-xl flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -2385,13 +3031,36 @@ function CompetitionsView({ toast, user }) {
                 Sizning jamoangiz: <strong className="text-violet-300">{myTeam.name}</strong> • Ball: <strong className="text-amber-400">{myTeam.score} pts</strong>
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setInArena(true)}
-              className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-black uppercase tracking-wider transition shadow-[0_0_20px_rgba(124,58,237,0.4)] flex items-center gap-2"
-            >
-              <Play size={14} /> Maydonga Kirish
-            </button>
+
+            {!isStarted ? (
+              <div className="flex flex-col items-end gap-1">
+                <button
+                  type="button"
+                  disabled
+                  className="px-6 py-3 rounded-xl bg-slate-800/80 border border-white/10 text-slate-400 text-xs font-bold uppercase tracking-wider opacity-60 cursor-not-allowed flex items-center gap-2 shadow-none"
+                  title="Musobaqa boshlanmaguncha maydonga kirib bo'lmaydi"
+                >
+                  <Lock size={14} /> Boshlanishi kutilmoqda
+                </button>
+                <span className="text-[10px] text-cyan-400 font-medium">Boshlanish vaqti kelganda maydon avtomatik ochiladi</span>
+              </div>
+            ) : isEnded ? (
+              <button
+                type="button"
+                onClick={() => setShowResultsModal(comp.id)}
+                className="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black uppercase tracking-wider transition shadow-[0_0_20px_rgba(245,158,11,0.4)] flex items-center gap-2"
+              >
+                <Trophy size={14} /> Natijalarni ko'rish
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setInArena(true)}
+                className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-black uppercase tracking-wider transition shadow-[0_0_20px_rgba(124,58,237,0.4)] flex items-center gap-2"
+              >
+                <Play size={14} /> Maydonga Kirish
+              </button>
+            )}
           </div>
         )}
 
@@ -2452,6 +3121,15 @@ function CompetitionsView({ toast, user }) {
             );
           })}
         </div>
+
+        {showResultsModal && (
+          <CompetitionResultsModal
+            compId={showResultsModal}
+            onClose={() => setShowResultsModal(null)}
+            user={user}
+            toast={toast}
+          />
+        )}
       </div>
     );
   }
@@ -2505,8 +3183,20 @@ function CompetitionsView({ toast, user }) {
                         <span>Jonli ketmoqda</span>
                       </div>
                     ) : (
-                      <div className="text-xs font-mono text-slate-500 bg-white/[0.02] border border-white/10 px-3 py-1.5 rounded-xl">
-                        Yakunlangan
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowResultsModal(comp.id);
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 text-xs font-bold transition flex items-center gap-1.5"
+                        >
+                          <Trophy size={12} /> Natijalar
+                        </button>
+                        <span className="text-xs font-mono text-slate-500 bg-white/[0.02] border border-white/10 px-3 py-1.5 rounded-xl">
+                          Yakunlangan
+                        </span>
                       </div>
                     )}
                   </div>
@@ -2517,12 +3207,23 @@ function CompetitionsView({ toast, user }) {
                   <span className="text-xs text-slate-400">
                     {new Date(comp.startsAt).toLocaleDateString("uz-UZ")} — {new Date(comp.endsAt).toLocaleDateString("uz-UZ")}
                   </span>
-                  <span className="text-violet-400 font-bold">Maydonga o'tish →</span>
+                  <span className="text-violet-400 font-bold">
+                    {isEnded ? "Natijalarni ko'rish →" : "Maydonga o'tish →"}
+                  </span>
                 </div>
               </Glass>
             );
           })}
         </div>
+      )}
+
+      {showResultsModal && (
+        <CompetitionResultsModal
+          compId={showResultsModal}
+          onClose={() => setShowResultsModal(null)}
+          user={user}
+          toast={toast}
+        />
       )}
     </div>
   );
