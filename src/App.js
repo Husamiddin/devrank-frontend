@@ -101,6 +101,28 @@ function formatScore(value) {
   return new Intl.NumberFormat("uz-UZ").format(Number(value || 0));
 }
 
+function triggerDesktopNotification(title, bodyOrOptions) {
+  if (typeof window !== "undefined" && "Notification" in window) {
+    const opts = typeof bodyOrOptions === "string" ? { body: bodyOrOptions } : (bodyOrOptions || {});
+    const finalOpts = { icon: "/favicon.ico", ...opts };
+    if (Notification.permission === "granted") {
+      try {
+        new Notification(title, finalOpts);
+      } catch (e) {
+        console.warn(e);
+      }
+    } else if (Notification.permission !== "denied") {
+      Notification.requestPermission().then((perm) => {
+        if (perm === "granted") {
+          try {
+            new Notification(title, finalOpts);
+          } catch (e) {}
+        }
+      });
+    }
+  }
+}
+
 function normalizeUser(raw) {
   const user = raw?.user || raw?.profile || raw || {};
   return {
@@ -777,6 +799,34 @@ function DashboardView({ user, leaderboard, setView, toast, refreshUser }) {
         }
       />
 
+      {/* New User Welcome & Platform Purpose Banner */}
+      {(!user.score || user.score < 50) && (
+        <div className="p-5 rounded-2xl border border-cyan-500/30 bg-gradient-to-r from-cyan-950/40 via-violet-950/30 to-black/60 backdrop-blur-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-in fade-in duration-300">
+          <div className="flex items-start gap-3.5">
+            <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xl shrink-0">
+              🚀
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm font-black text-white">Xush kelibsiz, yangi dasturchi!</h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Start: 0 pts</span>
+              </div>
+              <p className="text-xs text-slate-300 mt-1.5 leading-5 max-w-3xl">
+                <strong>DevRank UZ nima qiladi?</strong> Bu yerda siz turli yo'nalishlar (Web, AI, Cyber, UI/UX) bo'yicha amaliy topshiriqlarni yechasiz, jonli jamoaviy musobaqalarda qatnashasiz va O'zbekistonning eng kuchli dasturchilari reytingida 1-o'ringa ko'tarilasiz!
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setView("code")}
+            className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs transition shrink-0 shadow-md shadow-cyan-500/20 flex items-center gap-1.5"
+          >
+            <span>Topshiriqlarni boshlash</span>
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Hero Stats Card */}
       <Glass className="overflow-hidden border-violet-500/20 bg-gradient-to-br from-violet-950/20 via-[#0d0f17] to-cyan-950/10 p-6 sm:p-8">
         <div className="grid lg:grid-cols-[1fr_1.3fr] gap-8 items-center">
@@ -1119,25 +1169,78 @@ function CodeLabView({ toast, refreshUser }) {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [challengeTimeLeft, setChallengeTimeLeft] = useState(null);
+  const [labDisqualified, setLabDisqualified] = useState(false);
+  const labSafeExitRef = useRef(false);
 
   useEffect(() => {
     if (!selected) {
       setChallengeTimeLeft(null);
+      setLabDisqualified(false);
       return;
     }
+
+    labSafeExitRef.current = false;
+    setLabDisqualified(false);
+
+    // AI Code Lab Anti-Cheat: Enter Fullscreen
+    try {
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    } catch (e) {}
+
+    // Per-challenge timers: 120s (2 min) for Quiz, 600s (10 min) for Code
     const initial = selected.type === "QUIZ" ? 120 : (selected.difficulty === "hard" ? 900 : 600);
     setChallengeTimeLeft(initial);
 
     const timer = setInterval(() => {
-      setChallengeTimeLeft(t => {
+      setChallengeTimeLeft((t) => {
         if (t === null) return null;
         if (t <= 1) return 0;
         return t - 1;
       });
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [selected]);
+    // Anti-Cheat listeners: tab change, window blur, or exit fullscreen triggers failure
+    const handleVis = () => {
+      if (document.hidden && !labSafeExitRef.current) {
+        setLabDisqualified(true);
+        toast("error", "Anti-Cheat!", "Boshqa oynaga o'tish aniqlandi! Ushbu topshiriq bekor qilindi.");
+      }
+    };
+    const handleBlur = () => {
+      if (!labSafeExitRef.current) {
+        setLabDisqualified(true);
+        toast("error", "Anti-Cheat!", "Oyna faolligi yo'qotildi! Ushbu topshiriq bekor qilindi.");
+      }
+    };
+    const handleFs = () => {
+      if (!document.fullscreenElement && !labSafeExitRef.current) {
+        setLabDisqualified(true);
+        toast("error", "Anti-Cheat!", "To'liq ekrandan chiqildi! Ushbu topshiriq bekor qilindi.");
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVis);
+    window.addEventListener("blur", handleBlur);
+    document.addEventListener("fullscreenchange", handleFs);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", handleVis);
+      window.removeEventListener("blur", handleBlur);
+      document.removeEventListener("fullscreenchange", handleFs);
+    };
+  }, [selected, toast]);
+
+  function closeChallengeSafely() {
+    labSafeExitRef.current = true;
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
+    setSelected(null);
+    setLabDisqualified(false);
+  }
 
   const loadChallenges = useCallback(async () => {
     try {
@@ -1165,6 +1268,7 @@ function CodeLabView({ toast, refreshUser }) {
       setLanguage(c.language || "javascript");
       setQuizAnswer(null);
       setResult(null);
+      setLabDisqualified(false);
     } catch (err) {
       toast("error", "Challenge", apiMessage(err));
     }
@@ -1179,7 +1283,7 @@ function CodeLabView({ toast, refreshUser }) {
       openChallenge(next);
     } else {
       toast("info", "Tugadi", "Bu yo'nalishda barcha quiz savollar ko'rib chiqildi!");
-      setSelected(null);
+      closeChallengeSafely();
     }
   }
 
@@ -1325,12 +1429,31 @@ function CodeLabView({ toast, refreshUser }) {
           <Glass className="p-5 space-y-4">
             <button
               type="button"
-              onClick={() => setSelected(null)}
+              onClick={closeChallengeSafely}
               className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white"
             >
               <ArrowLeft size={14} />
               <span>Barcha topshiriqlar</span>
             </button>
+
+            {labDisqualified && (
+              <div className="p-4 rounded-xl bg-red-500/15 border border-red-500/30 text-red-300 text-xs space-y-2">
+                <div className="flex items-center gap-2 font-bold text-white">
+                  <ShieldAlert size={16} className="text-red-400" />
+                  <span>Anti-Cheat: Shubhali harakat!</span>
+                </div>
+                <p className="leading-5 text-[11px]">
+                  Boshqa oynaga o'tish yoki to'liq ekrandan chiqish taqiqlangan! Ushbu topshiriq bekor qilindi.
+                </p>
+                <button
+                  type="button"
+                  onClick={closeChallengeSafely}
+                  className="w-full py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-xs transition"
+                >
+                  Chiqish
+                </button>
+              </div>
+            )}
 
             <div>
               <span className="text-[10px] font-bold uppercase text-violet-400">{selected.category} • {selected.difficulty}</span>
@@ -1410,8 +1533,12 @@ function CodeLabView({ toast, refreshUser }) {
                       <button
                         key={opt}
                         type="button"
-                        disabled={!!isAnswered}
-                        onClick={() => !isAnswered && setQuizAnswer(idx)}
+                        disabled={!!isAnswered || quizAnswer !== null || labDisqualified || challengeTimeLeft === 0}
+                        onClick={() => {
+                          if (!isAnswered && quizAnswer === null && !labDisqualified) {
+                            setQuizAnswer(idx);
+                          }
+                        }}
                         className={cn(
                           "w-full p-4 rounded-xl border text-left text-xs sm:text-sm font-medium transition flex items-center gap-3",
                           isCorrect
@@ -1420,7 +1547,7 @@ function CodeLabView({ toast, refreshUser }) {
                             ? "border-red-500 bg-red-600/10 text-red-300"
                             : isSelected
                             ? "border-violet-500 bg-violet-600/20 text-white"
-                            : isAnswered
+                            : isAnswered || quizAnswer !== null || labDisqualified
                             ? "border-white/5 bg-white/[0.01] text-slate-500 cursor-not-allowed"
                             : "border-white/10 bg-white/[0.02] text-slate-300 hover:border-white/20"
                         )}
@@ -1458,7 +1585,7 @@ function CodeLabView({ toast, refreshUser }) {
                       Keyingi savol →
                     </button>
                   ) : (
-                    <Button onClick={submitSolution} disabled={loading || quizAnswer === null} icon={loading ? Loader2 : Check} className="ml-auto">
+                    <Button onClick={submitSolution} disabled={loading || quizAnswer === null || labDisqualified} icon={loading ? Loader2 : Check} className="ml-auto">
                       {loading ? "Tekshirilmoqda..." : "Javobni yuborish"}
                     </Button>
                   )}
@@ -1502,7 +1629,7 @@ function CodeLabView({ toast, refreshUser }) {
 
                 <div className="flex items-center justify-between p-3.5 border-t border-white/10 bg-[#090a11]">
                   <span className="text-[11px] text-slate-500">Test runner + AI Review</span>
-                  <Button onClick={submitSolution} disabled={loading} icon={loading ? Loader2 : Play}>
+                  <Button onClick={submitSolution} disabled={loading || labDisqualified} icon={loading ? Loader2 : Play}>
                     {loading ? "Testlar ishlamoqda..." : "Run Tests & AI Review"}
                   </Button>
                 </div>
@@ -2170,8 +2297,10 @@ function playCelebrationFanfare() {
   }
 }
 
-function CelebrationSnow() {
-  const emojis = ["🎉", "🏆", "⭐", "🎈", "🥇", "✨", "🎊", "🌟"];
+function CelebrationSnow({ isWinner = true }) {
+  const winnerEmojis = ["🏆", "🎉", "⭐", "🥇", "✨", "👑", "🚀", "🎊"];
+  const loserEmojis = ["😢", "💔", "😤", "🥀", "🌧️", "🥺", "🥈", "🤦‍♂️"];
+  const emojis = isWinner ? winnerEmojis : loserEmojis;
   const flakes = Array.from({ length: 42 }, (_, i) => ({
     id: i,
     emoji: emojis[i % emojis.length],
@@ -2213,7 +2342,7 @@ function CompetitionResultsModal({ compId, onClose, user, toast }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [contactForm, setContactForm] = useState({
-    phone: user?.phone || "",
+    phone: user?.phone || "+998",
     telegram: user?.telegram || "",
   });
   const [contactSubmitted, setContactSubmitted] = useState(false);
@@ -2240,7 +2369,7 @@ function CompetitionResultsModal({ compId, onClose, user, toast }) {
   async function submitWinnerContact(e) {
     e.preventDefault();
     if (!contactForm.phone.trim() || !contactForm.telegram.trim()) {
-      toast("warning", "Diqqat", "Telefon va Telegram username kiriting!");
+      toast("warning", "Diqqat", "Haqiqiy Telefon va Telegram username kiriting!");
       return;
     }
     setSubmittingContact(true);
@@ -2250,7 +2379,7 @@ function CompetitionResultsModal({ compId, onClose, user, toast }) {
         telegram: contactForm.telegram.trim(),
       });
       setContactSubmitted(true);
-      toast("success", "Ma'lumotlar saqlandi", "Diplom berish uchun ma'lumotlaringiz adminlarga yetkazildi!");
+      toast("success", "Ma'lumotlar saqlandi", "Ma'lumotlaringiz qabul qilindi. Tashkilotchilar tez orada bog'lanishadi!");
     } catch (err) {
       toast("error", "Xatolik", apiMessage(err));
     } finally {
@@ -2260,7 +2389,7 @@ function CompetitionResultsModal({ compId, onClose, user, toast }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 overflow-y-auto">
-      {data?.isWinner && data?.showResults && <CelebrationSnow />}
+      {data?.showResults && <CelebrationSnow isWinner={!!data.isWinner} />}
 
       <div className="w-full max-w-3xl rounded-3xl border border-white/10 bg-[#0d0f17] p-6 sm:p-8 shadow-2xl space-y-6 max-h-[92vh] overflow-y-auto relative">
         <div className="flex justify-between items-center border-b border-white/[0.08] pb-4">
@@ -2287,8 +2416,8 @@ function CompetitionResultsModal({ compId, onClose, user, toast }) {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* WINNER BANNER */}
-            {data.isWinner && (
+            {/* WINNER OR RUNNER UP BANNER */}
+            {data.isWinner ? (
               <div className="p-6 rounded-2xl bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-600/20 border border-amber-500/40 text-center space-y-2 relative overflow-hidden shadow-[0_0_40px_rgba(245,158,11,0.25)] animate-in zoom-in-95 duration-300">
                 <div className="text-4xl animate-bounce">🏆🥇🎉</div>
                 <h4 className="text-2xl font-black text-amber-300 tracking-wide">1-O'RIN! TABRIKLAYMIZ!</h4>
@@ -2296,57 +2425,70 @@ function CompetitionResultsModal({ compId, onClose, user, toast }) {
                   Sizning jamoangiz musobaqaning mutlaq g'olibi bo'ldi! Qobiliyatingiz va jamoaviy birligingiz uchun chin dildan qutlaymiz!
                 </p>
               </div>
-            )}
-
-            {/* DIPLOMA / WINNER CONTACT FORM */}
-            {data.isWinner && (
-              <div className="p-5 rounded-2xl bg-violet-600/10 border border-violet-500/30 space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">🎓</span>
-                  <h5 className="text-sm font-bold text-white">G'oliblik diplomi & sertifikat topshirish</h5>
-                </div>
-                <p className="text-xs text-slate-300 leading-5">
-                  G'olib bo'lganingiz uchun rasmiy diplom berish maqsadida aloqa ma'lumotlaringizni kiriting:
+            ) : (
+              <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900/60 via-slate-800/40 to-slate-900/60 border border-white/10 text-center space-y-2 animate-in zoom-in-95 duration-300">
+                <div className="text-4xl">💔 🌧️ 🥈</div>
+                <h4 className="text-xl font-black text-slate-200">G'alaba bu safar nasib etmadi</h4>
+                <p className="text-xs text-slate-400 max-w-lg mx-auto leading-5">
+                  Sizning jamoangiz yaxshi bellashdi, ammo g'oliblik boshqa jamoaga nasib etdi. Ruhdan tushmang, keyingi chempionatda albatta g'alaba qozonasiz!
                 </p>
-                {contactSubmitted ? (
-                  <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-center gap-2 font-semibold">
-                    <CheckCircle size={16} /> Ma'lumotlaringiz qabul qilindi! Tashkilotchilar tez orada siz bilan bog'lanishadi.
-                  </div>
-                ) : (
-                  <form onSubmit={submitWinnerContact} className="grid sm:grid-cols-[1fr_1fr_auto] gap-3 items-end">
-                    <div>
-                      <label className="block text-[11px] text-slate-400 mb-1 font-medium">Telefon raqamingiz</label>
-                      <input
-                        type="text"
-                        value={contactForm.phone}
-                        onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
-                        placeholder="+998 90 123 45 67"
-                        className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-slate-400 mb-1 font-medium">Telegram username</label>
-                      <input
-                        type="text"
-                        value={contactForm.telegram}
-                        onChange={(e) => setContactForm({ ...contactForm, telegram: e.target.value })}
-                        placeholder="@username"
-                        className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500"
-                        required
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      disabled={submittingContact}
-                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs transition disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-lg shadow-amber-500/20"
-                    >
-                      <Send size={13} /> {submittingContact ? "Yuborilmoqda..." : "Yuborish"}
-                    </button>
-                  </form>
-                )}
               </div>
             )}
+
+            {/* DIPLOMA / PARTICIPANT CONTACT FORM (FOR ALL) */}
+            <div className={cn(
+              "p-5 rounded-2xl border space-y-3",
+              data.isWinner ? "bg-violet-600/10 border-violet-500/30" : "bg-white/[0.02] border-white/10"
+            )}>
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{data.isWinner ? "🎓" : "📩"}</span>
+                <h5 className="text-sm font-bold text-white">
+                  {data.isWinner ? "G'oliblik diplomi & sovrinlarni topshirish" : "Diplom, sertifikat va bog'lanish ma'lumotlari"}
+                </h5>
+              </div>
+              <p className="text-xs text-slate-300 leading-5">
+                {data.isWinner
+                  ? "1-o'rin sohibi bo'lganingiz uchun rasmiy diplom va sovrinlarni topshirish maqsadida haqiqiy aloqa ma'lumotlaringizni kiriting:"
+                  : "Siz bilan bog'lanish, musobaqa natijalari, sertifikatlar hamda keyingi yirik chempionatlar haqida xabar berish uchun haqiqiy telefon raqamingiz va Telegram username'ingizni kiriting (tashkilotchilarimiz siz bilan bog'lanishadi):"}
+              </p>
+              {contactSubmitted ? (
+                <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-center gap-2 font-semibold">
+                  <CheckCircle size={16} /> Ma'lumotlaringiz qabul qilindi! Tashkilotchilar tez orada siz bilan bog'lanishadi.
+                </div>
+              ) : (
+                <form onSubmit={submitWinnerContact} className="grid sm:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+                  <div>
+                    <label className="block text-[11px] text-slate-400 mb-1 font-medium">Haqiqiy telefon raqam</label>
+                    <input
+                      type="text"
+                      value={contactForm.phone}
+                      onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+                      placeholder="+998 90 123 45 67"
+                      className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-slate-400 mb-1 font-medium">Haqiqiy Telegram username</label>
+                    <input
+                      type="text"
+                      value={contactForm.telegram}
+                      onChange={(e) => setContactForm({ ...contactForm, telegram: e.target.value })}
+                      placeholder="@username"
+                      className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500"
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={submittingContact}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs transition disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-lg shadow-amber-500/20"
+                  >
+                    <Send size={13} /> {submittingContact ? "Yuborilmoqda..." : "Yuborish"}
+                  </button>
+                </form>
+              )}
+            </div>
 
             {/* LEADERBOARD TABLE */}
             <div className="space-y-3">
@@ -2480,6 +2622,11 @@ function CompetitionArena({ compId, onBack, toast, user }) {
   const [isDisqualified, setIsDisqualified] = useState(false);
   const [disqualifiedReason, setDisqualifiedReason] = useState("");
   const [questionTimeLeft, setQuestionTimeLeft] = useState(60);
+  const [showFinishModal, setShowFinishModal] = useState(false);
+  const [finishPhone, setFinishPhone] = useState(user?.phone || "+998");
+  const [finishTelegram, setFinishTelegram] = useState(user?.telegram || "");
+  const [finishing, setFinishing] = useState(false);
+  const safeExitRef = useRef(false);
 
   const loadArena = useCallback(async () => {
     try {
@@ -2488,6 +2635,9 @@ function CompetitionArena({ compId, onBack, toast, user }) {
       if (res.data?.disqualified) {
         setIsDisqualified(true);
         setDisqualifiedReason(res.data.reason || "Chetlatilgan");
+      } else {
+        setIsDisqualified(false);
+        setDisqualifiedReason("");
       }
     } catch (err) {
       if (err.response?.status === 403 && err.response?.data?.disqualified) {
@@ -2520,7 +2670,7 @@ function CompetitionArena({ compId, onBack, toast, user }) {
 
   // Anti-Cheat: trigger disqualification if tab switched, window blurred, or full screen exited
   const triggerDisqualification = useCallback(async (reason) => {
-    if (isDisqualified) return;
+    if (isDisqualified || safeExitRef.current) return;
     setIsDisqualified(true);
     setDisqualifiedReason(reason);
     try {
@@ -2536,19 +2686,19 @@ function CompetitionArena({ compId, onBack, toast, user }) {
 
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.hidden && !isDisqualified) {
+      if (document.hidden && !isDisqualified && !safeExitRef.current) {
         triggerDisqualification("Boshqa oynaga/tabga o'tish aniqlandi!");
       }
     };
 
     const handleWindowBlur = () => {
-      if (!isDisqualified) {
+      if (!isDisqualified && !safeExitRef.current) {
         triggerDisqualification("Brauzer oynasi faolligi yo'qotildi (boshqa oynaga o'tildi)!");
       }
     };
 
     const handleFullscreenChange = () => {
-      if (!document.fullscreenElement && !isDisqualified) {
+      if (!document.fullscreenElement && !isDisqualified && !safeExitRef.current) {
         triggerDisqualification("To'liq ekran (Fullscreen) rejimidan chiqildi!");
       }
     };
@@ -2563,6 +2713,31 @@ function CompetitionArena({ compId, onBack, toast, user }) {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
     };
   }, [triggerDisqualification, isDisqualified]);
+
+  async function confirmFinish(e) {
+    e?.preventDefault();
+    if (!finishPhone.trim() || !finishTelegram.trim()) {
+      toast("warning", "Diqqat", "Iltimos, telefon va telegram username kiriting!");
+      return;
+    }
+    setFinishing(true);
+    try {
+      await api.post(`/api/competitions/${compId}/finish`, {
+        phone: finishPhone.trim(),
+        telegram: finishTelegram.trim()
+      });
+      safeExitRef.current = true;
+      if (document.fullscreenElement) {
+        await document.exitFullscreen().catch(() => {});
+      }
+      toast("success", "Yakunlandi!", "Test muvaffaqiyatli yakunlandi!");
+      onBack();
+    } catch (err) {
+      toast("error", "Xato", apiMessage(err));
+    } finally {
+      setFinishing(false);
+    }
+  }
 
   const questions = data?.questions || [];
   const currentQ = questions[activeIdx] || null;
@@ -2647,13 +2822,25 @@ function CompetitionArena({ compId, onBack, toast, user }) {
             <br /><br />
             <span className="text-amber-400 font-semibold">Qayta kirish imkoniyati faqat admin tomonidan ruxsat berilgandan so'ng ochiladi.</span>
           </p>
-          <button
-            type="button"
-            onClick={onBack}
-            className="w-full py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition"
-          >
-            Musobaqalar ro'yxatiga qaytish
-          </button>
+          <div className="space-y-2 pt-2">
+            <button
+              type="button"
+              onClick={async () => {
+                await loadArena();
+                toast("info", "Tekshirildi", "Admin ruxsati tekshirildi.");
+              }}
+              className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/20"
+            >
+              <RefreshCw size={14} /> Qayta tekshirish (Admin ruxsat bergan bo'lsa)
+            </button>
+            <button
+              type="button"
+              onClick={onBack}
+              className="w-full py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition"
+            >
+              Musobaqalar ro'yxatiga qaytish
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -2702,6 +2889,13 @@ function CompetitionArena({ compId, onBack, toast, user }) {
           </div>
           <button
             type="button"
+            onClick={() => setShowFinishModal(true)}
+            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-black text-xs transition flex items-center gap-1.5 shadow-lg shadow-red-950/40"
+          >
+            🏁 Testni yakunlash
+          </button>
+          <button
+            type="button"
             onClick={loadArena}
             className="p-2.5 rounded-xl border border-white/10 bg-white/[0.02] text-slate-400 hover:text-white transition"
             title="Yangilash"
@@ -2710,6 +2904,74 @@ function CompetitionArena({ compId, onBack, toast, user }) {
           </button>
         </div>
       </div>
+
+      {/* FINISH CONFIRMATION MODAL */}
+      {showFinishModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4">
+          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#0d0f17] p-6 space-y-4 shadow-2xl relative animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🏁</span>
+                <h4 className="text-base font-black text-white">Musobaqani yakunlaysizmi?</h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFinishModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Testni yakunlaganingizdan so'ng, siz bilan bog'lanish, diplomlar, sovrinlar va keyingi yirik musobaqalar haqida xabar berish uchun haqiqiy telefon raqamingiz va Telegram username'ingizni kiriting:
+            </p>
+
+            <form onSubmit={confirmFinish} className="space-y-3">
+              <div>
+                <label className="block text-[11px] text-slate-400 mb-1 font-medium">Haqiqiy telefon raqamingiz *</label>
+                <input
+                  type="text"
+                  value={finishPhone}
+                  onChange={(e) => setFinishPhone(e.target.value)}
+                  placeholder="+998 90 123 45 67"
+                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-slate-400 mb-1 font-medium">Haqiqiy Telegram username *</label>
+                <input
+                  type="text"
+                  value={finishTelegram}
+                  onChange={(e) => setFinishTelegram(e.target.value)}
+                  placeholder="@username"
+                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500"
+                  required
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowFinishModal(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-white/10 hover:bg-white/[0.05] text-slate-300 text-xs font-bold transition"
+                >
+                  Davom etish
+                </button>
+                <button
+                  type="submit"
+                  disabled={finishing}
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white text-xs font-black transition disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-lg shadow-red-950/40"
+                >
+                  {finishing ? "Yakunlanmoqda..." : "Ha, Yakunlash"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Live Timer Alert */}
       {!isStarted ? (
@@ -2759,16 +3021,17 @@ function CompetitionArena({ compId, onBack, toast, user }) {
                     ? "ring-2 ring-violet-400 scale-105 z-10"
                     : "",
                   isSolved
-                    ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                    ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
                     : q.isMyTurn
-                      ? "border border-violet-400/60 bg-violet-500/10 text-violet-300"
-                      : "bg-white/[0.02] border border-white/10 text-slate-400 hover:border-white/20"
+                      ? "bg-violet-600/20 text-violet-300 border border-violet-500/30 font-black"
+                      : "bg-white/[0.02] text-slate-500 border border-white/5 hover:border-white/20"
                 )}
-                title={`Savol #${q.orderIndex} (${q.difficulty}) - ${isSolved ? "Yechilgan" : q.isMyTurn ? "Sizning navbatingiz" : "Yechilmagan"}`}
+                title={`Savol #${q.orderIndex} (${q.type}) - ${isSolved ? "Yechilgan" : q.isMyTurn ? "Sizning navbatingiz" : "Boshqa a'zo"}`}
               >
                 {q.orderIndex}
-                {isSolved && <span className="absolute -top-1 -right-1 text-[8px] text-emerald-400 font-black">✓</span>}
-                {q.isMyTurn && !isSolved && <span className="absolute -top-0.5 -left-0.5 w-1.5 h-1.5 rounded-full bg-violet-400" />}
+                {isSolved && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400" />
+                )}
               </button>
             );
           })}
@@ -2777,31 +3040,29 @@ function CompetitionArena({ compId, onBack, toast, user }) {
 
       {/* Active Question Box */}
       {currentQ && (
-        <Glass className="p-6 space-y-5" onCopy={(e) => e.preventDefault()} onContextMenu={(e) => e.preventDefault()}>
+        <Glass className="p-6 space-y-5 border-violet-500/20" onCopy={(e) => e.preventDefault()} onContextMenu={(e) => e.preventDefault()}>
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] pb-4">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono font-bold text-white bg-white/10 px-2.5 py-1 rounded-lg">
-                #{currentQ.orderIndex}
-              </span>
+              <span className="text-sm font-black text-white font-mono">Savol #{currentQ.orderIndex}</span>
               <span className={cn(
-                "text-[10px] font-black uppercase px-2.5 py-1 rounded-full border",
-                currentQ.difficulty === "easy" ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20" :
-                currentQ.difficulty === "medium" ? "bg-amber-500/10 text-amber-300 border-amber-500/20" :
-                currentQ.difficulty === "hard" ? "bg-orange-500/10 text-orange-300 border-orange-500/20" :
-                "bg-red-500/10 text-red-300 border-red-500/20"
+                "text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full border",
+                currentQ.difficulty === "easy" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                  : currentQ.difficulty === "medium" ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                    : currentQ.difficulty === "hard" ? "bg-orange-500/10 text-orange-400 border-orange-500/20"
+                      : "bg-red-500/10 text-red-400 border-red-500/20 font-black"
               )}>
                 {currentQ.difficulty}
               </span>
-              <span className="text-xs font-bold text-amber-400 font-mono">+{currentQ.points} ball</span>
+              <span className="text-[10px] font-mono text-slate-400">+{currentQ.points} ball</span>
             </div>
 
-            {/* Per-Question Live Countdown Timer */}
-            <div className="flex items-center gap-3">
-              {currentQ.status !== "SOLVED" && isStarted && !isEnded && (
+            <div className="flex items-center gap-2">
+              {/* Question Countdown Timer */}
+              {currentQ.status !== "SOLVED" && (
                 <div className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-xl border font-mono text-xs font-bold transition",
+                  "flex items-center gap-1.5 px-3 py-1 rounded-lg border text-xs font-mono font-bold transition",
                   questionTimeLeft > 15
-                    ? "text-cyan-300 bg-cyan-500/10 border-cyan-500/20"
+                    ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
                     : "text-red-400 bg-red-500/15 border-red-500/30 animate-pulse"
                 )}>
                   <Clock size={13} />
@@ -2832,15 +3093,18 @@ function CompetitionArena({ compId, onBack, toast, user }) {
                 const optLetter = String.fromCharCode(65 + i);
                 const isSelected = selectedAns === opt;
                 const isSolvedCorrect = currentQ.status === "SOLVED" && currentQ.solvedInfo?.answer === opt;
+                const hasAnswered = currentQ.status === "SOLVED" || currentQ.status === "FAILED" || currentQ.solvedInfo?.answered || selectedAns !== "";
 
                 return (
                   <button
                     key={opt}
                     type="button"
-                    disabled={currentQ.status === "SOLVED" || submitting || !isStarted || isEnded}
+                    disabled={hasAnswered || submitting || !isStarted || isEnded}
                     onClick={() => {
-                      setSelectedAns(opt);
-                      submitAnswer(opt);
+                      if (!hasAnswered && !submitting && isStarted && !isEnded) {
+                        setSelectedAns(opt);
+                        submitAnswer(opt);
+                      }
                     }}
                     className={cn(
                       "flex items-start gap-3 p-4 rounded-xl border text-left transition select-none",
@@ -3073,7 +3337,22 @@ function CompetitionsView({ toast, user }) {
     setLoading(true);
     try {
       const res = await api.get("/api/competitions");
-      setCompetitions(res.data?.items || []);
+      const items = res.data?.items || [];
+      setCompetitions(items);
+
+      // Check if there is an active competition or competition in progress
+      const now = Date.now();
+      const activeComp = items.find((c) => {
+        const start = new Date(c.startsAt).getTime();
+        const end = new Date(c.endsAt).getTime();
+        return c.status === "ACTIVE" || (start <= now && end >= now);
+      });
+      if (activeComp) {
+        triggerDesktopNotification(
+          "DevRank UZ Musobaqa Boshlandi! 🏆",
+          `"${activeComp.title}" musobaqasi boshlandi! Jamoangiz bilan bellashuvga kiring va 500 ball yuting!`
+        );
+      }
     } catch (err) {
       toast("error", "Xatolik", apiMessage(err));
     } finally {
@@ -3403,6 +3682,7 @@ function ContentView({ toast }) {
   const [news, setNews] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [expandedNews, setExpandedNews] = useState({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -3447,26 +3727,66 @@ function ContentView({ toast }) {
           ) : news.length === 0 ? (
             <Empty text="Hali yangiliklar yo‘q" sub="Yangi xabarlar bazaga qo'shilganda shu yerda ko'rinadi." />
           ) : (
-            <div className="space-y-3">
-              {news.map((item) => (
-                <div key={item.id} className="p-4 rounded-xl border border-white/[0.04] bg-white/[0.01]">
-                  {item.imageUrl && (
-                    <img
-                      src={item.imageUrl}
-                      alt={item.title}
-                      className="w-full h-40 object-cover rounded-lg mb-3"
-                      onError={(e) => { e.target.style.display = "none"; }}
-                    />
-                  )}
-                  <h4 className="font-bold text-white text-sm">{item.title}</h4>
-                  <p className="mt-1 text-xs text-slate-400 leading-5">{item.summary}</p>
-                  {item.sourceUrl ? (
-                    <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-[11px] text-violet-400 font-bold hover:underline">
-                      Manba <ExternalLink size={11} />
-                    </a>
-                  ) : null}
-                </div>
-              ))}
+            <div className="space-y-4">
+              {news.map((item) => {
+                const hasLongContent = item.content && item.content !== item.summary && item.content.length > 250;
+                const isExpanded = !!expandedNews[item.id];
+                return (
+                  <div key={item.id} className="p-5 rounded-2xl border border-white/[0.08] bg-white/[0.02] hover:border-cyan-500/30 transition-all duration-300 shadow-lg">
+                    {item.imageUrl && (
+                      <div className="w-full bg-black/50 rounded-xl border border-white/10 p-2 mb-3.5 flex items-center justify-center overflow-hidden min-h-[160px] max-h-64 shadow-inner">
+                        <img
+                          src={item.imageUrl}
+                          alt={item.title}
+                          className="max-h-60 max-w-full object-contain rounded-lg shadow-md transition-transform duration-300 hover:scale-[1.01]"
+                          onError={(e) => { e.target.style.display = "none"; }}
+                        />
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                        {item.category || "IT Yangilik"}
+                      </span>
+                      {item.createdAt && (
+                        <span className="text-[10px] text-slate-400">
+                          {new Date(item.createdAt).toLocaleDateString("uz-UZ", { day: "numeric", month: "short", year: "numeric" })}
+                        </span>
+                      )}
+                    </div>
+                    <h4 className="font-bold text-white text-base leading-snug tracking-tight mb-2">{item.title}</h4>
+                    {item.summary && (
+                      <p className="text-xs text-slate-300 font-medium leading-relaxed mb-2">{item.summary}</p>
+                    )}
+                    {item.content && item.content !== item.summary && (
+                      <div className="text-xs text-slate-400 leading-relaxed space-y-2 whitespace-pre-line">
+                        {isExpanded || !hasLongContent ? item.content : `${item.content.slice(0, 250)}...`}
+                      </div>
+                    )}
+                    <div className="mt-3 pt-2.5 border-t border-white/[0.06] flex items-center justify-between">
+                      {item.sourceUrl ? (
+                        <a
+                          href={item.sourceUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs text-violet-400 font-semibold hover:text-violet-300 transition"
+                        >
+                          <span>Rasmiy manba</span>
+                          <ExternalLink size={12} />
+                        </a>
+                      ) : <span />}
+                      {hasLongContent && (
+                        <button
+                          type="button"
+                          onClick={() => setExpandedNews((prev) => ({ ...prev, [item.id]: !prev[item.id] }))}
+                          className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition"
+                        >
+                          {isExpanded ? "Qisqartirish ↑" : "Batafsil o‘qish ↓"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </Glass>
@@ -3483,15 +3803,25 @@ function ContentView({ toast }) {
           ) : events.length === 0 ? (
             <Empty text="Hali tadbirlar yo‘q" sub="Kelgusi hackathon va uchrashuvlar bazaga kiritilganda e'lon qilinadi." />
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {events.map((item) => (
-                <div key={item.id} className="p-4 rounded-xl border border-white/[0.04] bg-white/[0.01]">
-                  <h4 className="font-bold text-white text-sm">{item.title}</h4>
-                  <p className="mt-1 text-xs text-slate-400 leading-5">{item.description}</p>
-                  <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500 font-medium">
-                    <span>{item.location || "Online"} • {new Date(item.startsAt).toLocaleDateString("uz-UZ")}</span>
+                <div key={item.id} className="p-5 rounded-2xl border border-white/[0.08] bg-white/[0.02] hover:border-fuchsia-500/30 transition-all duration-300 shadow-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20">
+                      {item.category || "Hackathon"}
+                    </span>
+                    {item.startsAt && (
+                      <span className="text-[10px] text-slate-400">
+                        {new Date(item.startsAt).toLocaleDateString("uz-UZ", { day: "numeric", month: "short", year: "numeric" })}
+                      </span>
+                    )}
+                  </div>
+                  <h4 className="font-bold text-white text-base leading-snug tracking-tight mb-1.5">{item.title}</h4>
+                  <p className="text-xs text-slate-300 leading-relaxed mb-3">{item.description}</p>
+                  <div className="pt-2.5 border-t border-white/[0.06] flex items-center justify-between text-xs text-slate-400 font-medium">
+                    <span>📍 {item.location || "Online"}</span>
                     {item.eventUrl ? (
-                      <a href={item.eventUrl} target="_blank" rel="noreferrer" className="text-cyan-400 font-bold hover:underline">
+                      <a href={item.eventUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-cyan-400 font-bold hover:text-cyan-300 transition">
                         Ro‘yxatdan o‘tish →
                       </a>
                     ) : null}
