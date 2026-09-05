@@ -6,6 +6,7 @@ import {
   Activity,
   AlertCircle,
   ArrowLeft,
+  BookOpen,
   CalendarDays,
   Camera,
   Check,
@@ -2918,6 +2919,146 @@ function CompetitionArena({ compId, onBack, toast, user }) {
   );
 }
 
+// ----------------- COMPETITION RULES MODAL -----------------
+function CompetitionRulesModal({ onClose }) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+      <div className="relative w-full max-w-2xl bg-gradient-to-b from-[#18122B] via-[#100d20] to-[#0a0814] border border-violet-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-violet-950/60 space-y-5 text-white my-8 max-h-[90vh] overflow-y-auto">
+        
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4 border-b border-white/[0.08] pb-4">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-400 text-[11px] font-bold tracking-wider uppercase">
+              <Sparkles size={13} />
+              <span>Rasmiy Reglament • 30 soniyalik qo'llanma</span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+              Musobaqa Qoidalari
+            </h3>
+            <p className="text-xs text-slate-400">
+              Musobaqada muvaffaqiyat qozonish va diskvalifikatsiyadan saqlanish uchun asosiy qoidalar (O'qish vaqti: ~30 soniya)
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-slate-400 hover:text-white transition cursor-pointer shrink-0"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Quick Highlights Bar */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] text-center">
+            <div className="text-lg font-black text-violet-400">50 ta</div>
+            <div className="text-[10px] text-slate-400 font-medium mt-0.5">Umumiy Savollar</div>
+          </div>
+          <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center">
+            <div className="text-lg font-black text-amber-400">60s / 5 daq</div>
+            <div className="text-[10px] text-amber-300/80 font-medium mt-0.5">Savol Taymeri</div>
+          </div>
+          <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/20 text-center">
+            <div className="text-lg font-black text-red-400">FullScreen</div>
+            <div className="text-[10px] text-red-300/80 font-medium mt-0.5">Anti-Cheat Nazorati</div>
+          </div>
+          <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-center">
+            <div className="text-lg font-black text-emerald-400">G'oliblik</div>
+            <div className="text-[10px] text-emerald-300/80 font-medium mt-0.5">Rasmiy Diplom</div>
+          </div>
+        </div>
+
+        {/* Rules Cards Container */}
+        <div className="space-y-3 pt-1">
+          {/* Rule 1: Anti Cheat & Fullscreen */}
+          <div className="p-4 rounded-2xl bg-red-950/20 border border-red-500/30 flex items-start gap-3.5">
+            <div className="p-2.5 rounded-xl bg-red-500/20 text-red-400 shrink-0 mt-0.5">
+              <ShieldAlert size={20} />
+            </div>
+            <div className="space-y-1">
+              <div className="text-xs font-bold text-red-300 flex items-center gap-2">
+                <span>1. TO'LIQ EKRAN (FULLSCREEN) VA ANTI-CHEAT NAZORATI</span>
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/30 text-red-200 uppercase font-black tracking-wider">Qat'iy qoida</span>
+              </div>
+              <p className="text-[12px] text-slate-300 leading-relaxed">
+                Maydonga kirishingiz bilan brauzer <strong>avtomatik FullScreen (to'liq ekran)</strong> rejimiga o'tadi. Musobaqa paytida boshqa tabga o'tish, <code className="text-amber-300 bg-white/10 px-1 py-0.5 rounded">Alt + Tab</code> qilish, ekranni kichraytirish yoki boshqa dasturga o'tish <strong>qat'iyan taqiqlanadi</strong>. Har qanday shubhali harakatda tizim sizni <strong>darhol diskvalifikatsiya qiladi</strong> va qayta kirish bloklanadi!
+              </p>
+            </div>
+          </div>
+
+          {/* Rule 2: Timers */}
+          <div className="p-4 rounded-2xl bg-amber-950/20 border border-amber-500/30 flex items-start gap-3.5">
+            <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 shrink-0 mt-0.5">
+              <Clock size={20} />
+            </div>
+            <div className="space-y-1">
+              <div className="text-xs font-bold text-amber-300">2. VAQT CHEGARALARI VA AVTOMATIK TOPSHIRISH</div>
+              <p className="text-[12px] text-slate-300 leading-relaxed">
+                • <strong>1 – 45 test savollari (Quiz):</strong> Har bir savol uchun <strong className="text-amber-300">60 soniya</strong> vaqt ajratiladi.<br/>
+                • <strong>46 – 50 amaliy dasturlash (Extreme):</strong> Har bir masala uchun <strong className="text-amber-300">5 daqiqa (300 soniya)</strong> beriladi.<br/>
+                Vaqt tugaganda yozilgan javob avtomatik qabul qilinadi va tizim navbatdagi savolga o'tkazadi.
+              </p>
+            </div>
+          </div>
+
+          {/* Rule 3: How to answer */}
+          <div className="p-4 rounded-2xl bg-cyan-950/20 border border-cyan-500/30 flex items-start gap-3.5">
+            <div className="p-2.5 rounded-xl bg-cyan-500/20 text-cyan-400 shrink-0 mt-0.5">
+              <Code2 size={20} />
+            </div>
+            <div className="space-y-1">
+              <div className="text-xs font-bold text-cyan-300">3. SAVOLLARGA QANDAY JAVOB BERILADI?</div>
+              <p className="text-[12px] text-slate-300 leading-relaxed">
+                • <strong>Quiz (1-45):</strong> Berilgan variantlardan (A, B, C, D) to'g'risini bir marta bosish kifoya. Javob darhol qabul qilinadi.<br/>
+                • <strong>Kod yozish (46-50):</strong> Masala shartini o'qing, kod maydonida toza dastur yechimingizni yozing va <span className="text-white font-bold bg-violet-600/60 px-1.5 py-0.5 rounded">Kodni topshirish</span> tugmasini bosing (to'g'ri kod uchun 150 ball beriladi).
+              </p>
+            </div>
+          </div>
+
+          {/* Rule 4: Team and Scoring */}
+          <div className="p-4 rounded-2xl bg-violet-950/20 border border-violet-500/30 flex items-start gap-3.5">
+            <div className="p-2.5 rounded-xl bg-violet-500/20 text-violet-400 shrink-0 mt-0.5">
+              <Users size={20} />
+            </div>
+            <div className="space-y-1">
+              <div className="text-xs font-bold text-violet-300">4. JAMOA BELLASHUVI VA TEZLIK USTUNLIGI</div>
+              <p className="text-[12px] text-slate-300 leading-relaxed">
+                Jamoangizdagi barcha ishtirokchilar to'plagan ballar jamoaning umumiy hisobiga qo'shiladi. Qanchalik <strong>tez</strong> va <strong>aniq</strong> yechsangiz, jamoangiz Live reytingda shuncha yuqorilab boradi.
+              </p>
+            </div>
+          </div>
+
+          {/* Rule 5: Winner and Diploma */}
+          <div className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 flex items-start gap-3.5">
+            <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
+              <Trophy size={20} />
+            </div>
+            <div className="space-y-1">
+              <div className="text-xs font-bold text-emerald-300">5. G'OLIBLAR VA RASMIY DIPLOM</div>
+              <p className="text-[12px] text-slate-300 leading-relaxed">
+                Musobaqa yakunida g'olib bo'lgan jamoa a'zolariga <strong>Rasmiy DevRank G'oliblik Diplomi</strong> ochiladi hamda tashkilotchilar bilan to'g'ridan-to'g'ri bog'lanish shakli taqdim etiladi!
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Button */}
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 via-purple-600 to-cyan-500 hover:from-violet-500 hover:to-cyan-400 text-white font-black text-sm uppercase tracking-wider transition shadow-lg shadow-violet-600/30 flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <CheckCircle size={16} />
+            <span>Tushundim, barcha qoidalar ma'qul! 🚀</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 // ----------------- COMPETITIONS VIEW -----------------
 function CompetitionsView({ toast, user }) {
   const [competitions, setCompetitions] = useState([]);
@@ -2926,6 +3067,7 @@ function CompetitionsView({ toast, user }) {
   const [joining, setJoining] = useState(false);
   const [inArena, setInArena] = useState(false);
   const [showResultsModal, setShowResultsModal] = useState(null);
+  const [showRulesModal, setShowRulesModal] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -2988,11 +3130,19 @@ function CompetitionsView({ toast, user }) {
             <ArrowLeft size={18} />
           </button>
           <div className="flex-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-xl font-black text-white">{comp.title}</h2>
               <span className="text-[10px] font-bold text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded-full">
                 50 ta Savol
               </span>
+              <button
+                type="button"
+                onClick={() => setShowRulesModal(true)}
+                className="px-3 py-1.5 rounded-xl bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/30 text-violet-300 hover:text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ml-auto"
+              >
+                <BookOpen size={14} className="text-violet-400" />
+                <span>Qoidalar</span>
+              </button>
             </div>
             <p className="text-xs text-slate-400">{comp.description}</p>
           </div>
@@ -3022,8 +3172,8 @@ function CompetitionsView({ toast, user }) {
         {/* Action Button to Enter 50 Questions Arena - STRICTLY LOCKED BEFORE START TIME */}
         {myTeam && (
           <div className="p-5 rounded-2xl border border-violet-500/40 bg-gradient-to-r from-violet-600/20 via-purple-600/20 to-cyan-600/20 backdrop-blur-xl flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <div className="text-sm font-black text-white flex items-center gap-2">
+            <div className="flex-1 min-w-[200px]">
+              <div className="text-sm font-black text-white flex items-center gap-2 flex-wrap">
                 <span>⚡ Musobaqa Maydoni</span>
                 <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">50 ta Savol</span>
               </div>
@@ -3032,35 +3182,46 @@ function CompetitionsView({ toast, user }) {
               </p>
             </div>
 
-            {!isStarted ? (
-              <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setShowRulesModal(true)}
+                className="px-4 py-3 rounded-xl bg-violet-600/25 hover:bg-violet-600/40 border border-violet-500/40 hover:border-violet-400 text-violet-200 hover:text-white text-xs font-bold transition flex items-center gap-2 shadow-lg shadow-violet-500/10 cursor-pointer"
+              >
+                <BookOpen size={15} className="text-violet-400" />
+                <span>Qoidalar</span>
+              </button>
+
+              {!isStarted ? (
+                <div className="flex flex-col items-end gap-1">
+                  <button
+                    type="button"
+                    disabled
+                    className="px-6 py-3 rounded-xl bg-slate-800/80 border border-white/10 text-slate-400 text-xs font-bold uppercase tracking-wider opacity-60 cursor-not-allowed flex items-center gap-2 shadow-none"
+                    title="Musobaqa boshlanmaguncha maydonga kirib bo'lmaydi"
+                  >
+                    <Lock size={14} /> Boshlanishi kutilmoqda
+                  </button>
+                  <span className="text-[10px] text-cyan-400 font-medium">Boshlanish vaqti kelganda maydon avtomatik ochiladi</span>
+                </div>
+              ) : isEnded ? (
                 <button
                   type="button"
-                  disabled
-                  className="px-6 py-3 rounded-xl bg-slate-800/80 border border-white/10 text-slate-400 text-xs font-bold uppercase tracking-wider opacity-60 cursor-not-allowed flex items-center gap-2 shadow-none"
-                  title="Musobaqa boshlanmaguncha maydonga kirib bo'lmaydi"
+                  onClick={() => setShowResultsModal(comp.id)}
+                  className="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black uppercase tracking-wider transition shadow-[0_0_20px_rgba(245,158,11,0.4)] flex items-center gap-2"
                 >
-                  <Lock size={14} /> Boshlanishi kutilmoqda
+                  <Trophy size={14} /> Natijalarni ko'rish
                 </button>
-                <span className="text-[10px] text-cyan-400 font-medium">Boshlanish vaqti kelganda maydon avtomatik ochiladi</span>
-              </div>
-            ) : isEnded ? (
-              <button
-                type="button"
-                onClick={() => setShowResultsModal(comp.id)}
-                className="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black uppercase tracking-wider transition shadow-[0_0_20px_rgba(245,158,11,0.4)] flex items-center gap-2"
-              >
-                <Trophy size={14} /> Natijalarni ko'rish
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setInArena(true)}
-                className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-black uppercase tracking-wider transition shadow-[0_0_20px_rgba(124,58,237,0.4)] flex items-center gap-2"
-              >
-                <Play size={14} /> Maydonga Kirish
-              </button>
-            )}
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setInArena(true)}
+                  className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-black uppercase tracking-wider transition shadow-[0_0_20px_rgba(124,58,237,0.4)] flex items-center gap-2"
+                >
+                  <Play size={14} /> Maydonga Kirish
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -3121,6 +3282,10 @@ function CompetitionsView({ toast, user }) {
             );
           })}
         </div>
+
+        {showRulesModal && (
+          <CompetitionRulesModal onClose={() => setShowRulesModal(false)} />
+        )}
 
         {showResultsModal && (
           <CompetitionResultsModal
@@ -3215,6 +3380,10 @@ function CompetitionsView({ toast, user }) {
             );
           })}
         </div>
+      )}
+
+      {showRulesModal && (
+        <CompetitionRulesModal onClose={() => setShowRulesModal(false)} />
       )}
 
       {showResultsModal && (
