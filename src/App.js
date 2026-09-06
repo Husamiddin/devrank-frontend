@@ -2668,7 +2668,7 @@ function CompetitionArena({ compId, onBack, toast, user }) {
     enterFullscreen();
   }, []);
 
-  // Anti-Cheat: trigger disqualification if tab switched, window blurred, or full screen exited
+  // Anti-Cheat: trigger disqualification if tab switched, window blurred, full screen exited, or back navigated
   const triggerDisqualification = useCallback(async (reason) => {
     if (isDisqualified || safeExitRef.current) return;
     setIsDisqualified(true);
@@ -2683,6 +2683,17 @@ function CompetitionArena({ compId, onBack, toast, user }) {
       document.exitFullscreen().catch(() => {});
     }
   }, [compId, isDisqualified, toast]);
+
+  const handleManualBack = useCallback(() => {
+    if (safeExitRef.current || isDisqualified) {
+      onBack();
+      return;
+    }
+    if (window.confirm("DIQQAT! Musobaqa maydonidan chiqib ketsangiz, qoidaga binoan musobaqadan CHETLATILASIZ va qaytib kira olmaysiz! Haqiqatdan ham chiqmoqchimisiz?")) {
+      triggerDisqualification("Musobaqa maydonidan 'Orqaga' tugmasi bosilib chiqildi!");
+      onBack();
+    }
+  }, [safeExitRef, isDisqualified, onBack, triggerDisqualification]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -2703,11 +2714,30 @@ function CompetitionArena({ compId, onBack, toast, user }) {
       }
     };
 
+    const handlePopState = () => {
+      if (!isDisqualified && !safeExitRef.current) {
+        triggerDisqualification("Brauzer 'Orqaga' tugmasi bosildi va musobaqadan chiqildi!");
+      }
+    };
+
+    const handleBeforeUnload = (e) => {
+      if (!isDisqualified && !safeExitRef.current) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+
+    window.history.pushState(null, "", window.location.href);
+    window.addEventListener("popstate", handlePopState);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("blur", handleWindowBlur);
     document.addEventListener("fullscreenchange", handleFullscreenChange);
 
     return () => {
+      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("blur", handleWindowBlur);
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
@@ -2865,7 +2895,7 @@ function CompetitionArena({ compId, onBack, toast, user }) {
       {/* Top Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <button type="button" onClick={onBack} className="p-2 rounded-xl hover:bg-white/[0.04] text-slate-400">
+          <button type="button" onClick={handleManualBack} className="p-2 rounded-xl hover:bg-white/[0.04] text-slate-400" title="Chiqish">
             <ArrowLeft size={18} />
           </button>
           <div>
@@ -3010,6 +3040,7 @@ function CompetitionArena({ compId, onBack, toast, user }) {
           {questions.map((q, idx) => {
             const isSelected = idx === activeIdx;
             const isSolved = q.status === "SOLVED";
+            const isFailed = q.status === "FAILED";
             return (
               <button
                 key={q.id}
@@ -3022,15 +3053,20 @@ function CompetitionArena({ compId, onBack, toast, user }) {
                     : "",
                   isSolved
                     ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                    : q.isMyTurn
-                      ? "bg-violet-600/20 text-violet-300 border border-violet-500/30 font-black"
-                      : "bg-white/[0.02] text-slate-500 border border-white/5 hover:border-white/20"
+                    : isFailed
+                      ? "bg-red-500/20 text-red-300 border border-red-500/30"
+                      : q.isMyTurn
+                        ? "bg-violet-600/20 text-violet-300 border border-violet-500/30 font-black"
+                        : "bg-white/[0.02] text-slate-500 border border-white/5 hover:border-white/20"
                 )}
-                title={`Savol #${q.orderIndex} (${q.type}) - ${isSolved ? "Yechilgan" : q.isMyTurn ? "Sizning navbatingiz" : "Boshqa a'zo"}`}
+                title={`Savol #${q.orderIndex} (${q.type}) - ${isSolved ? "To'g'ri yechilgan" : isFailed ? "Noto'g'ri ishlangan" : q.isMyTurn ? "Sizning navbatingiz" : "Boshqa a'zo"}`}
               >
                 {q.orderIndex}
                 {isSolved && (
                   <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400" />
+                )}
+                {isFailed && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-400" />
                 )}
               </button>
             );
@@ -3053,12 +3089,12 @@ function CompetitionArena({ compId, onBack, toast, user }) {
               )}>
                 {currentQ.difficulty}
               </span>
-              <span className="text-[10px] font-mono text-slate-400">+{currentQ.points} ball</span>
+              <span className="text-[10px] font-mono font-bold text-amber-400">+{currentQ.points} ball</span>
             </div>
 
             <div className="flex items-center gap-2">
               {/* Question Countdown Timer */}
-              {currentQ.status !== "SOLVED" && (
+              {currentQ.status !== "SOLVED" && currentQ.status !== "FAILED" && (
                 <div className={cn(
                   "flex items-center gap-1.5 px-3 py-1 rounded-lg border text-xs font-mono font-bold transition",
                   questionTimeLeft > 15
@@ -3072,7 +3108,11 @@ function CompetitionArena({ compId, onBack, toast, user }) {
 
               {currentQ.status === "SOLVED" ? (
                 <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg flex items-center gap-1">
-                  <Check size={13} /> Jamoa yechdi ({currentQ.solvedInfo?.answeredBy})
+                  <Check size={13} /> To'g'ri topshirilgan ({currentQ.solvedInfo?.answeredBy})
+                </span>
+              ) : currentQ.status === "FAILED" ? (
+                <span className="text-xs font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-1 rounded-lg flex items-center gap-1">
+                  <X size={13} /> Noto'g'ri ishlangan ({currentQ.solvedInfo?.answeredBy})
                 </span>
               ) : currentQ.isMyTurn ? (
                 <span className="text-xs font-bold text-violet-300 bg-violet-500/10 border border-violet-500/20 px-3 py-1 rounded-lg">
@@ -3083,8 +3123,24 @@ function CompetitionArena({ compId, onBack, toast, user }) {
           </div>
 
           <div>
-            <h3 className="text-base lg:text-lg font-bold text-white leading-relaxed">{currentQ.question}</h3>
+            <h3 className="text-base lg:text-lg font-bold text-white leading-relaxed whitespace-pre-line">{currentQ.question}</h3>
           </div>
+
+          {/* LOCKED STATUS BANNER */}
+          {(currentQ.status === "SOLVED" || currentQ.status === "FAILED") && (
+            <div className={cn(
+              "p-3.5 rounded-xl border text-xs font-semibold flex items-center gap-2.5",
+              currentQ.status === "SOLVED"
+                ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-300"
+                : "bg-red-500/10 border-red-500/25 text-red-300"
+            )}>
+              {currentQ.status === "SOLVED" ? <Check size={16} className="text-emerald-400 shrink-0" /> : <X size={16} className="text-red-400 shrink-0" />}
+              <div>
+                <div className="font-bold">{currentQ.status === "SOLVED" ? `To'g'ri javob topshirilgan (+${currentQ.points} ball).` : "Ushbu savolga noto'g'ri javob berilgan (0 ball)."}</div>
+                <div className="text-[10px] text-slate-400 font-normal">Qoidaga binoan savolga faqat 1 marta javob berish mumkin, qayta urinish yoki javobni o'zgartirish qat'iyan taqiqlangan.</div>
+              </div>
+            </div>
+          )}
 
           {/* QUIZ TYPE: 4 Options */}
           {currentQ.type === "QUIZ" && currentQ.options && (
@@ -3113,7 +3169,7 @@ function CompetitionArena({ compId, onBack, toast, user }) {
                         : isSelected
                           ? "border-violet-500 bg-violet-500/15 text-white"
                           : "border-white/10 bg-white/[0.02] text-slate-300 hover:border-white/20 hover:bg-white/[0.04]",
-                      (currentQ.status === "SOLVED" || !isStarted || isEnded) && "cursor-default"
+                      (currentQ.status === "SOLVED" || currentQ.status === "FAILED" || !isStarted || isEnded) && "cursor-default"
                     )}
                   >
                     <span className="w-6 h-6 rounded-lg bg-white/10 text-white font-bold text-xs flex items-center justify-center shrink-0">
@@ -3126,30 +3182,86 @@ function CompetitionArena({ compId, onBack, toast, user }) {
             </div>
           )}
 
-          {/* CODE TYPE: Coding editor for Extreme 46-50 */}
-          {currentQ.type === "CODE" && (
+          {/* PROMPT TYPE: Image & Video Prompt Engineering */}
+          {currentQ.type === "PROMPT" && (
             <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <span>Dasturlash tili: <strong className="text-white uppercase">{currentQ.language || "JavaScript"}</strong></span>
-                <span className="text-red-400 font-bold">Ekstremal Daraja (150 ball) • 5 daqiqa vaqt</span>
+              <div className="flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
+                <span className="flex items-center gap-1.5 text-cyan-400 font-bold">
+                  <Sparkles size={14} />
+                  <span>Formal Inglizcha AI Prompt Muhandisligi</span>
+                </span>
+                <span className="text-amber-400 font-bold font-mono">+{currentQ.points} ball • 5 daqiqa vaqt</span>
               </div>
+
+              <div className="p-3 rounded-xl bg-violet-500/10 border border-violet-500/20 text-xs text-slate-300 leading-relaxed">
+                💡 <strong>Qat'iy ko'rsatma:</strong> Promptni faqat <strong>ingliz tilida</strong>, professional tarzda yozing.
+                <br />
+                Tavsiya etilgan tuzilma: <em>[Subject] + [Environment / Lighting] + [Camera Angle / Movement] + [Style, Render Quality, 8k, Unreal Engine, Photorealistic]</em>
+              </div>
+
               <textarea
-                rows={8}
+                rows={7}
                 value={codeAns}
                 onChange={(e) => setCodeAns(e.target.value)}
-                disabled={currentQ.status === "SOLVED" || !isStarted || isEnded}
-                placeholder="// Kod yechimingizni shu yerga yozing..."
-                className="w-full font-mono text-xs text-emerald-300 bg-black/60 border border-white/10 rounded-xl p-4 outline-none focus:border-violet-500 leading-5"
-                style={{ tabSize: 2 }}
+                disabled={currentQ.status === "SOLVED" || currentQ.status === "FAILED" || !isStarted || isEnded}
+                placeholder="// Write your detailed, formal English AI generation prompt here..."
+                className="w-full font-mono text-xs text-cyan-300 bg-black/60 border border-white/10 rounded-xl p-4 outline-none focus:border-cyan-500 leading-relaxed placeholder:text-slate-600"
               />
-              {currentQ.status !== "SOLVED" && isStarted && !isEnded && (
+
+              <div className="flex items-center justify-between text-[11px] text-slate-400">
+                <span>Belgilar soni: <strong className={codeAns.length >= 50 ? "text-emerald-400" : "text-amber-400"}>{codeAns.length}</strong> (kamida 50 ta tavsiya etiladi)</span>
+              </div>
+
+              {currentQ.status !== "SOLVED" && currentQ.status !== "FAILED" && isStarted && !isEnded && (
                 <button
                   type="button"
-                  disabled={submitting}
+                  disabled={submitting || codeAns.trim().length < 15}
                   onClick={() => submitAnswer(codeAns)}
-                  className="px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold transition disabled:opacity-50 flex items-center gap-1.5"
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold transition disabled:opacity-50 flex items-center gap-1.5 shadow-lg shadow-cyan-950/40"
                 >
-                  <Code2 size={14} /> {submitting ? "Tekshirilmoqda..." : "Kodni topshirish (150 ball)"}
+                  <Sparkles size={14} /> {submitting ? "Tekshirilmoqda..." : `Promptni topshirish (${currentQ.points} ball)`}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* CODE TYPE: Coding editor for Extreme 50 (Machine Learning 500 BALL!) */}
+          {currentQ.type === "CODE" && (
+            <div className="space-y-3 pt-2">
+              <div className="flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
+                <span className="flex items-center gap-1.5 text-amber-400 font-bold">
+                  <Code2 size={14} />
+                  <span>Dasturlash tili: <strong className="text-white uppercase">{currentQ.language || "JavaScript"}</strong></span>
+                </span>
+                <span className="text-red-400 font-black font-mono">
+                  {currentQ.orderIndex === 50 ? "🔥 MACHINE LEARNING (500 BALL!)" : "Ekstremal Daraja"} • 5 daqiqa vaqt
+                </span>
+              </div>
+
+              {currentQ.orderIndex === 50 && (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-200 leading-relaxed">
+                  ⭐ <strong>Eng yuqori balli bosh masala (500 BALL):</strong> Transformer arxitekturasining Scaled Dot-Product Attention mexanizmini to'g'ri bajaring. Yechim boshlang'ich kodda yozilmagan, mustaqil yozishingiz talab etiladi!
+                </div>
+              )}
+
+              <textarea
+                rows={10}
+                value={codeAns}
+                onChange={(e) => setCodeAns(e.target.value)}
+                disabled={currentQ.status === "SOLVED" || currentQ.status === "FAILED" || !isStarted || isEnded}
+                placeholder="// Kod yechimingizni shu yerga yozing..."
+                className="w-full font-mono text-xs text-emerald-300 bg-black/60 border border-white/10 rounded-xl p-4 outline-none focus:border-amber-500 leading-relaxed"
+                style={{ tabSize: 2 }}
+              />
+
+              {currentQ.status !== "SOLVED" && currentQ.status !== "FAILED" && isStarted && !isEnded && (
+                <button
+                  type="button"
+                  disabled={submitting || codeAns.trim().length < 15}
+                  onClick={() => submitAnswer(codeAns)}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-bold transition disabled:opacity-50 flex items-center gap-1.5 shadow-lg shadow-amber-950/40"
+                >
+                  <Code2 size={14} /> {submitting ? "Tekshirilmoqda..." : `Kodni topshirish (${currentQ.points} ball)`}
                 </button>
               )}
             </div>
