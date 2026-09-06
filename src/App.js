@@ -2395,7 +2395,18 @@ function CompetitionResultsModal({ compId, onClose, user, toast }) {
         <div className="flex justify-between items-center border-b border-white/[0.08] pb-4">
           <div className="flex items-center gap-2">
             <Trophy className="text-amber-400" size={22} />
-            <h3 className="text-lg sm:text-xl font-black text-white">Musobaqa Yakuniy Natijalari</h3>
+            <div>
+              <h3 className="text-lg sm:text-xl font-black text-white">Musobaqa Yakuniy Natijalari</h3>
+              {data?.competition?.startsAt && data?.competition?.endsAt && (
+                <div className="text-[11px] text-slate-400 font-mono mt-1 flex items-center gap-1.5">
+                  <Clock size={12} className="text-emerald-400" />
+                  <span>
+                    Davomiyligi: {new Date(data.competition.startsAt).toLocaleTimeString("uz-UZ")} – {new Date(data.competition.endsAt).toLocaleTimeString("uz-UZ")}
+                    {" "} ({new Date(data.competition.startsAt).toLocaleDateString("uz-UZ")})
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
           <button type="button" onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/[0.06] transition">
             <X size={18} />
@@ -2496,7 +2507,7 @@ function CompetitionResultsModal({ compId, onClose, user, toast }) {
                 <span>Jamoalar Reytingi (Leaderboard)</span>
                 <span className="text-[10px] text-slate-500">To'plangan ballar asosida</span>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {(data.leaderboard || []).map((t) => {
                   const rankIcons = ["🥇 1-o'rin", "🥈 2-o'rin", "🥉 3-o'rin"];
                   const rankLabel = rankIcons[t.rank - 1] || `${t.rank}-o'rin`;
@@ -2505,7 +2516,7 @@ function CompetitionResultsModal({ compId, onClose, user, toast }) {
                     <div
                       key={t.id}
                       className={cn(
-                        "flex items-center justify-between p-4 rounded-xl border transition",
+                        "p-4 rounded-xl border transition flex flex-col gap-3",
                         t.isWinner
                           ? "border-amber-500/40 bg-amber-500/[0.08]"
                           : t.isMyTeam
@@ -2513,33 +2524,50 @@ function CompetitionResultsModal({ compId, onClose, user, toast }) {
                             : "border-white/10 bg-white/[0.02]"
                       )}
                     >
-                      <div className="flex items-center gap-3">
-                        <span className={cn(
-                          "px-2.5 py-1 rounded-lg text-xs font-black font-mono",
-                          t.rank === 1 ? "bg-amber-500 text-slate-950 font-extrabold" :
-                          t.rank === 2 ? "bg-slate-300 text-slate-950" :
-                          t.rank === 3 ? "bg-amber-700 text-white" :
-                          "bg-white/10 text-slate-400"
-                        )}>
-                          {rankLabel}
-                        </span>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h5 className="font-bold text-white text-sm">{t.name}</h5>
-                            {t.isMyTeam && (
-                              <span className="text-[10px] font-bold text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded-full">
-                                Sizning jamoangiz
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[10px] text-slate-400 mt-0.5">
-                            {t.memberCount} nafar a'zo • {t.members?.map(m => m.name).join(", ")}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className={cn(
+                            "px-2.5 py-1 rounded-lg text-xs font-black font-mono",
+                            t.rank === 1 ? "bg-amber-500 text-slate-950 font-extrabold" :
+                            t.rank === 2 ? "bg-slate-300 text-slate-950" :
+                            t.rank === 3 ? "bg-amber-700 text-white" :
+                            "bg-white/10 text-slate-400"
+                          )}>
+                            {rankLabel}
+                          </span>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h5 className="font-bold text-white text-sm">{t.name}</h5>
+                              {t.isMyTeam && (
+                                <span className="text-[10px] font-bold text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded-full">
+                                  Sizning jamoangiz
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-slate-400 mt-0.5">
+                              {t.memberCount} nafar a'zo
+                            </div>
                           </div>
                         </div>
+                        <div className="text-right">
+                          <div className="text-base font-black text-amber-400 font-mono">{t.score} pts</div>
+                          <div className="text-[10px] text-slate-500 font-mono">Umumiy ball</div>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-base font-black text-amber-400 font-mono">{t.score} pts</div>
-                        <div className="text-[10px] text-slate-500 font-mono">Umumiy ball</div>
+
+                      {/* Explicit Member Activity View */}
+                      <div className="flex flex-wrap gap-2 pt-2 border-t border-white/5">
+                        {t.members?.map(m => (
+                          <div key={m.id} className="flex items-center gap-1.5 px-2 py-1 rounded bg-black/40 border border-white/5 text-[10px]">
+                            <span className={cn("w-1.5 h-1.5 rounded-full", m.disqualified ? "bg-red-500" : "bg-emerald-500")}></span>
+                            <span className="text-white font-medium">{m.name}</span>
+                            <span className="text-slate-500">|</span>
+                            <span className="text-amber-400 font-bold">{m.solvedCount || 0} yechdi</span>
+                            {m.disqualified && (
+                              <span className="text-red-400 font-bold ml-1">(Chetlatilgan)</span>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   );
