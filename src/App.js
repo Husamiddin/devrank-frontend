@@ -52,13 +52,19 @@ import {
 } from "lucide-react";
 
 const API_BASE_URL =
-  (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"))
+  (typeof window !== "undefined" && (
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1" ||
+    window.location.hostname.startsWith("192.168.") ||
+    window.location.hostname.startsWith("10.") ||
+    window.location.hostname.startsWith("172.")
+  ))
     ? "http://localhost:5000"
-    : (typeof process !== "undefined" && process.env?.REACT_APP_API_URL) || "https://devrank-backend-production.up.railway.app";
+    : (typeof process !== "undefined" && process.env?.REACT_APP_API_URL) || "http://localhost:5000";
 
 const STORAGE = {
-  token: "devrank_token",
-  user: "devrank_user",
+  token: "AslKod_token",
+  user: "AslKod_user",
 };
 
 const api = axios.create({
@@ -132,11 +138,11 @@ function normalizeUser(raw) {
     email: user.email || "",
     phone: user.phone || "",
     bio: user.bio || "",
-    role: user.role || "Full Stack Developer",
+    role: user.role || "",
     level: Number(user.level || 1),
-    province: user.province || "Toshkent shahri",
+    province: user.province || "",
     avatar: user.avatar || "",
-    primaryCategory: user.primaryCategory || "web",
+    primaryCategory: user.primaryCategory || "",
     score: Number(user.score || 0),
     rank: Number(user.rank || 0),
     projectsCount: Number(user.projectsCount || 0),
@@ -401,9 +407,9 @@ function AuthView({ onAuthenticated, toast }) {
         <div className="hidden lg:flex flex-col justify-between p-10 border-r border-white/10 bg-gradient-to-br from-violet-950/20 via-black to-[#07080e]">
           <div>
             <div className="flex items-center gap-3">
-              <img src="/devrank_logo.png" alt="DevRank UZ Logo" className="w-10 h-10 object-contain rounded-xl" />
+              <img src="/AslKod.png" alt="AslKod UZ Logo" className="w-10 h-10 object-contain rounded-xl" />
               <div>
-                <span className="font-black text-xl tracking-tight">DevRank</span>{" "}
+                <span className="font-black text-xl tracking-tight">AslKod</span>{" "}
                 <span className="font-bold text-xs bg-violet-500/20 text-violet-300 px-2 py-0.5 rounded-full border border-violet-500/30">UZ</span>
               </div>
             </div>
@@ -414,7 +420,7 @@ function AuthView({ onAuthenticated, toast }) {
                 O‘zbekiston dasturchilarining <span className="bg-gradient-to-r from-violet-400 to-cyan-300 bg-clip-text text-transparent">haqiqiy reyting platformasi</span>
               </h1>
               <p className="mt-4 text-sm text-slate-400 leading-6">
-                DevRank UZ - bu O‘zbekiston dasturchilarining haqiqiy ko‘rsatkichlarini aniqlash va reytinglash uchun yaratilgan platforma. Har bir foydalanuvchi o‘zining real kodlash qobiliyatini sinab ko‘rishi va boshqa dasturchilar bilan solishtirishi mumkin.
+                AslKod UZ - bu O‘zbekiston dasturchilarining haqiqiy ko‘rsatkichlarini aniqlash va reytinglash uchun yaratilgan platforma. Har bir foydalanuvchi o‘zining real kodlash qobiliyatini sinab ko‘rishi va boshqa dasturchilar bilan solishtirishi mumkin.
               </p>
             </div>
           </div>
@@ -437,7 +443,7 @@ function AuthView({ onAuthenticated, toast }) {
             <div className="mb-6">
               <h2 className="text-2xl font-black text-white">{mode === "login" ? "Tizimga kirish" : "Ro‘yxatdan o‘tish"}</h2>
               <p className="text-xs text-slate-400 mt-1">
-                {mode === "login" ? "DevRank hisobingiz orqali platformaga kiring." : "Yangi dasturchi profili yarating va reytingda qatnashing."}
+                {mode === "login" ? "AslKod hisobingiz orqali platformaga kiring." : "Yangi dasturchi profili yarating va reytingda qatnashing."}
               </p>
             </div>
 
@@ -559,10 +565,10 @@ function Sidebar({ view, setView, onLogout, user, mobileOpen, setMobileOpen }) {
     <>
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-[260px] border-r border-white/[0.08] bg-[#090a11]/95 px-5 py-6 lg:flex lg:flex-col backdrop-blur-2xl">
         <div className="flex items-center gap-3">
-          <img src="/devrank_logo.png" alt="DevRank UZ Logo" className="w-9 h-9 object-contain rounded-xl" />
+          <img src="/AslKod_logo.png" alt="AslKod UZ Logo" className="w-9 h-9 object-contain rounded-xl" />
           <div>
             <div className="font-black tracking-tight text-base text-white">
-              DevRank <span className="text-violet-400">UZ</span>
+              AslKod <span className="text-violet-400">UZ</span>
             </div>
             <div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Education</div>
           </div>
@@ -619,8 +625,8 @@ function Sidebar({ view, setView, onLogout, user, mobileOpen, setMobileOpen }) {
             <div>
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
-                  <img src="/devrank_logo.png" alt="DevRank UZ Logo" className="w-8 h-8 object-contain rounded-xl" />
-                  <div className="font-black text-lg">DevRank UZ</div>
+                  <img src="/AslKod_logo.png" alt="AslKod UZ Logo" className="w-8 h-8 object-contain rounded-xl" />
+                  <div className="font-black text-lg">AslKod UZ</div>
                 </div>
                 <button type="button" onClick={() => setMobileOpen(false)} className="text-slate-400">
                   <X size={20} />
@@ -812,7 +818,7 @@ function DashboardView({ user, leaderboard, setView, toast, refreshUser }) {
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Start: 0 pts</span>
               </div>
               <p className="text-xs text-slate-300 mt-1.5 leading-5 max-w-3xl">
-                <strong>DevRank UZ nima qiladi?</strong> Bu yerda siz turli yo'nalishlar (Web, AI, Cyber, UI/UX) bo'yicha amaliy topshiriqlarni yechasiz, jonli jamoaviy musobaqalarda qatnashasiz va O'zbekistonning eng kuchli dasturchilari reytingida 1-o'ringa ko'tarilasiz!
+                <strong>AslKod UZ nima qiladi?</strong> Bu yerda siz turli yo'nalishlar (Web, AI, Cyber, UI/UX) bo'yicha amaliy topshiriqlarni yechasiz, jonli jamoaviy musobaqalarda qatnashasiz va O'zbekistonning eng kuchli dasturchilari reytingida 1-o'ringa ko'tarilasiz!
               </p>
             </div>
           </div>
@@ -895,7 +901,7 @@ function DashboardView({ user, leaderboard, setView, toast, refreshUser }) {
             <span className="text-xs font-bold uppercase tracking-wider">Hudud</span>
             <Activity size={16} className="text-fuchsia-400" />
           </div>
-          <div className="text-2xl font-black text-white truncate">{user.province || "—"}</div>
+          <div className="text-2xl font-black text-white truncate">{user.province}</div>
           <div className="mt-1 text-[11px] text-slate-500">Mintaqaviy guruh</div>
         </Glass>
       </div>
@@ -930,7 +936,7 @@ function DashboardView({ user, leaderboard, setView, toast, refreshUser }) {
                   <Avatar user={item} size="sm" />
                   <div className="min-w-0 flex-1">
                     <div className="text-xs font-bold text-white truncate">{item.name}</div>
-                    <div className="text-[10px] text-slate-500">{item.province || "—"}</div>
+                    <div className="text-[10px] text-slate-500">{item.province}</div>
                   </div>
                   <div className="text-right">
                     <div className="text-xs font-black text-white">{formatScore(item.score)}</div>
@@ -1088,7 +1094,7 @@ function LeaderboardView({ toast, onOpenProfile }) {
             <div className="inline-block rounded-full bg-slate-500/20 px-2.5 py-0.5 text-xs font-bold text-slate-300 mb-2">#2 O‘rin</div>
             <Avatar user={items[1]} size="lg" />
             <h4 className="mt-3 font-black text-white text-base truncate">{items[1].name}</h4>
-            <div className="text-xs text-slate-400">{items[1].province || "—"}</div>
+            <div className="text-xs text-slate-400">{items[0].province}</div>
             <div className="mt-3 text-lg font-black text-cyan-300">{formatScore(items[1].score)} pts</div>
           </Glass>
 
@@ -1097,7 +1103,7 @@ function LeaderboardView({ toast, onOpenProfile }) {
             <div className="inline-block rounded-full bg-amber-500/20 px-3 py-1 text-xs font-black text-amber-300 mb-2">👑 #1 Chempion</div>
             <Avatar user={items[0]} size="xl" />
             <h4 className="mt-3 font-black text-white text-lg truncate">{items[0].name}</h4>
-            <div className="text-xs text-slate-400">{items[0].province || "—"}</div>
+            <div className="text-xs text-slate-400">{items[0].province}</div>
             <div className="mt-3 text-2xl font-black text-amber-300">{formatScore(items[0].score)} pts</div>
           </Glass>
 
@@ -1106,7 +1112,7 @@ function LeaderboardView({ toast, onOpenProfile }) {
             <div className="inline-block rounded-full bg-amber-800/20 px-2.5 py-0.5 text-xs font-bold text-amber-500 mb-2">#3 O‘rin</div>
             <Avatar user={items[2]} size="lg" />
             <h4 className="mt-3 font-black text-white text-base truncate">{items[2].name}</h4>
-            <div className="text-xs text-slate-400">{items[2].province || "—"}</div>
+            <div className="text-xs text-slate-400">{items[0].province}</div>
             <div className="mt-3 text-lg font-black text-violet-300">{formatScore(items[2].score)} pts</div>
           </Glass>
         </div>
@@ -1134,7 +1140,7 @@ function LeaderboardView({ toast, onOpenProfile }) {
                 <Avatar user={item} size="sm" />
                 <div className="min-w-0 flex-1">
                   <div className="text-xs sm:text-sm font-bold text-white truncate">{item.name}</div>
-                  <div className="text-[10px] text-slate-500">{item.province || "Hudud kiritilmagan"}</div>
+                  <div className="text-[10px] text-slate-500">{item.province}</div>
                 </div>
 
                 <div className="hidden sm:flex flex-wrap gap-1 max-w-xs justify-end">
@@ -1658,7 +1664,7 @@ function CodeLabView({ toast, refreshUser }) {
                   </>
                 ) : (
                   <div className="text-slate-600">
-                    › $ devrank runner ready...<br />
+                    › $ AslKod runner ready...<br />
                     › Kodni yozib "Run Tests" tugmasini bosing.
                   </div>
                 )}
@@ -1915,8 +1921,8 @@ function ProfileModal({ user, onClose, toast, refreshUser }) {
     name: user.name || "",
     phone: user.phone || "",
     telegram: user.telegram || "",
-    role: user.role || "Full Stack Developer",
-    province: user.province || "Toshkent shahri",
+    role: user.role || "",
+    province: user.province || "",
     bio: user.bio || "",
     skills: (user.skills || []).join(", "),
     avatar: user.avatar || "",
@@ -2313,7 +2319,7 @@ function CelebrationSnow({ isWinner = true }) {
   return (
     <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
       <style>{`
-        @keyframes devrankSnow {
+        @keyframes AslKodSnow {
           0% { transform: translateY(-50px) rotate(0deg); opacity: 1; }
           100% { transform: translateY(105vh) rotate(360deg); opacity: 0.15; }
         }
@@ -2326,7 +2332,7 @@ function CelebrationSnow({ isWinner = true }) {
             left: f.left,
             top: "-50px",
             fontSize: f.size,
-            animation: `devrankSnow ${f.duration} linear infinite`,
+            animation: `AslKodSnow ${f.duration} linear infinite`,
             animationDelay: f.delay
           }}
         >
@@ -2876,7 +2882,7 @@ function CompetitionArena({ compId, onBack, toast, user }) {
             <strong>Sabab:</strong> {disqualifiedReason || "Boshqa oynaga o'tish yoki to'liq ekrandan chiqish qoidabuzarligi aniqlandi."}
           </div>
           <p className="text-xs text-slate-400 leading-5">
-            DevRank musobaqalarida halollik qat'iy nazorat qilinadi. Boshqa ilovaga yoki tabga o'tish qat'iyan taqiqlangan.
+            AslKod musobaqalarida halollik qat'iy nazorat qilinadi. Boshqa ilovaga yoki tabga o'tish qat'iyan taqiqlangan.
             <br /><br />
             <span className="text-amber-400 font-semibold">Qayta kirish imkoniyati faqat admin tomonidan ruxsat berilgandan so'ng ochiladi.</span>
           </p>
@@ -3440,7 +3446,7 @@ function CompetitionRulesModal({ onClose }) {
             <div className="space-y-1">
               <div className="text-xs font-bold text-emerald-300">5. G'OLIBLAR VA RASMIY DIPLOM</div>
               <p className="text-[12px] text-slate-300 leading-relaxed">
-                Musobaqa yakunida g'olib bo'lgan jamoa a'zolariga <strong>Rasmiy DevRank G'oliblik Diplomi</strong> ochiladi hamda tashkilotchilar bilan to'g'ridan-to'g'ri bog'lanish shakli taqdim etiladi!
+                Musobaqa yakunida g'olib bo'lgan jamoa a'zolariga <strong>Rasmiy AslKod G'oliblik Diplomi</strong> ochiladi hamda tashkilotchilar bilan to'g'ridan-to'g'ri bog'lanish shakli taqdim etiladi!
               </p>
             </div>
           </div>
@@ -3489,7 +3495,7 @@ function CompetitionsView({ toast, user }) {
       });
       if (activeComp) {
         triggerDesktopNotification(
-          "DevRank UZ Musobaqa Boshlandi! 🏆",
+          "AslKod UZ Musobaqa Boshlandi! 🏆",
           `"${activeComp.title}" musobaqasi boshlandi! Jamoangiz bilan bellashuvga kiring va 500 ball yuting!`
         );
       }
