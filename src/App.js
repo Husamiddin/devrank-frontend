@@ -110,7 +110,7 @@ function formatScore(value) {
 function triggerDesktopNotification(title, bodyOrOptions) {
   if (typeof window !== "undefined" && "Notification" in window) {
     const opts = typeof bodyOrOptions === "string" ? { body: bodyOrOptions } : (bodyOrOptions || {});
-    const finalOpts = { icon: "/favicon.ico", ...opts };
+    const finalOpts = { icon: "/AslKod.favicon.ico", ...opts };
     if (Notification.permission === "granted") {
       try {
         new Notification(title, finalOpts);

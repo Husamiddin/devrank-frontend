@@ -2,7 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App';
-<link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+<link rel="icon" href="%PUBLIC_URL%/AslKod.favicon.ico" />
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
