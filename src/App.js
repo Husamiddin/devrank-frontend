@@ -170,6 +170,7 @@ const LANGUAGES = [
   ["python", "Python", "py"],
   ["cpp", "C++", "cpp"],
   ["csharp", "C#", "cs"],
+  ["react", "React (JSX)", "jsx"],
 ];
 
 const PROVINCES = [
@@ -1167,6 +1168,26 @@ function LeaderboardView({ toast, onOpenProfile }) {
 }
 
 // ----------------- AI CODE LAB VIEW -----------------
+function getStarterTemplate(lang, challenge) {
+  const title = challenge?.title || "Vazifa";
+  if (lang === "python") {
+    return `# ${title}\ndef solve(*args):\n    # Yechimingizni shu yerga yozing\n    pass\n`;
+  }
+  if (lang === "cpp") {
+    return `// ${title}\n#include <iostream>\n#include <vector>\n#include <string>\nusing namespace std;\n\n// Yechimingizni shu yerga yozing\nint solve() {\n    return 0;\n}\n`;
+  }
+  if (lang === "csharp") {
+    return `// ${title}\nusing System;\nusing System.Collections.Generic;\n\npublic class Solution {\n    public object Solve(params object[] args) {\n        // Yechimingizni shu yerga yozing\n        return null;\n    }\n}\n`;
+  }
+  if (lang === "react") {
+    return `import React, { useState } from 'react';\n\n// ${title}\nexport default function Solution() {\n  const [val, setVal] = useState('');\n\n  return (\n    <div className="p-4 bg-slate-900 rounded-xl text-white">\n      <h3 className="font-bold text-base mb-2">${title}</h3>\n      <p className="text-xs text-slate-400">Yechimingizni shu yerga yozing</p>\n    </div>\n  );\n}\n`;
+  }
+  if (lang === "typescript") {
+    return challenge?.starterCode || `function solve(...args: any[]): any {\n  // Yechimingizni shu yerga yozing\n  \n}`;
+  }
+  return challenge?.starterCode || `function solve(...args) {\n  // Yechimingizni shu yerga yozing\n  \n}`;
+}
+
 function CodeLabView({ toast, refreshUser }) {
   const [category, setCategory] = useState("web");
   const [challenges, setChallenges] = useState([]);
@@ -1209,23 +1230,33 @@ function CodeLabView({ toast, refreshUser }) {
       });
     }, 1000);
 
+    const reportSuspicion = (reason) => {
+      setLabDisqualified(true);
+      if (selected?.id) {
+        api.post(`/api/challenges/${selected.id}/flag-suspicious`, { reason }).catch(() => {});
+        setChallenges((prev) =>
+          prev.map((c) => (c.id === selected.id ? { ...c, isSuspicious: true, suspicionReason: reason } : c))
+        );
+      }
+    };
+
     // Anti-Cheat listeners: tab change, window blur, or exit fullscreen triggers failure
     const handleVis = () => {
       if (document.hidden && !labSafeExitRef.current) {
-        setLabDisqualified(true);
-        toast("error", "Anti-Cheat!", "Boshqa oynaga o'tish aniqlandi! Ushbu topshiriq bekor qilindi.");
+        reportSuspicion("Oynadan chiqib ketish / Tab almashtirish");
+        toast("error", "Anti-Cheat: Shubha bor!", "Boshqa oynaga o'tish aniqlandi! Topshiriq 'Shubha bor' deb belgilandi.");
       }
     };
     const handleBlur = () => {
       if (!labSafeExitRef.current) {
-        setLabDisqualified(true);
-        toast("error", "Anti-Cheat!", "Oyna faolligi yo'qotildi! Ushbu topshiriq bekor qilindi.");
+        reportSuspicion("Oyna faolligi yo'qotildi / Blur");
+        toast("error", "Anti-Cheat: Shubha bor!", "Oyna faolligi yo'qotildi! Topshiriq 'Shubha bor' deb belgilandi.");
       }
     };
     const handleFs = () => {
       if (!document.fullscreenElement && !labSafeExitRef.current) {
-        setLabDisqualified(true);
-        toast("error", "Anti-Cheat!", "To'liq ekrandan chiqildi! Ushbu topshiriq bekor qilindi.");
+        reportSuspicion("To'liq ekrandan chiqildi");
+        toast("error", "Anti-Cheat: Shubha bor!", "To'liq ekrandan chiqildi! Topshiriq 'Shubha bor' deb belgilandi.");
       }
     };
 
@@ -1248,6 +1279,7 @@ function CodeLabView({ toast, refreshUser }) {
     }
     setSelected(null);
     setLabDisqualified(false);
+    loadChallenges();
   }
 
   const loadChallenges = useCallback(async () => {
@@ -1379,12 +1411,14 @@ function CodeLabView({ toast, refreshUser }) {
                   key={item.id}
                   onClick={() => !item.locked && openChallenge(item)}
                   className={cn(
-                    "p-5 transition",
-                    item.completed
-                      ? "border-emerald-500/30 bg-emerald-500/[0.06]"
-                      : item.locked
-                        ? "opacity-50 cursor-not-allowed border-white/5"
-                        : ""
+                    "p-5 transition cursor-pointer relative",
+                    item.isSuspicious
+                      ? "border-red-500/60 bg-red-950/25 shadow-lg shadow-red-950/40 hover:border-red-400"
+                      : item.completed
+                        ? "border-emerald-500/30 bg-emerald-500/[0.06] hover:border-emerald-500/50"
+                        : item.locked
+                          ? "opacity-50 cursor-not-allowed border-white/5"
+                          : "hover:border-violet-500/40"
                   )}
                 >
                   <div className="flex justify-between items-start">
@@ -1404,6 +1438,11 @@ function CodeLabView({ toast, refreshUser }) {
                       )}>
                         {item.difficulty}
                       </span>
+                      {item.isSuspicious && (
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full border bg-red-500/20 text-red-300 border-red-500/40 flex items-center gap-1">
+                          <ShieldAlert size={10} /> Shubhali
+                        </span>
+                      )}
                     </div>
                     <span className="text-xs font-bold text-amber-400">{item.points} pts</span>
                   </div>
@@ -1413,7 +1452,11 @@ function CodeLabView({ toast, refreshUser }) {
 
                   <div className="mt-4 flex items-center justify-between pt-3 border-t border-white/[0.06] text-[10px] text-slate-500 font-medium">
                     <span className="capitalize">{item.difficulty} • {item.language}</span>
-                    {item.completed ? (
+                    {item.isSuspicious ? (
+                      <span className="text-red-400 font-bold flex items-center gap-1 bg-red-500/15 px-2.5 py-1 rounded-lg border border-red-500/30 text-xs shadow-sm">
+                        <ShieldAlert size={13} className="text-red-400" /> Shubha bor
+                      </span>
+                    ) : item.completed ? (
                       <span className="text-emerald-400 font-bold flex items-center gap-1">
                         <Check size={12} /> Bajarilgan
                       </span>
@@ -1607,21 +1650,40 @@ function CodeLabView({ toast, refreshUser }) {
                     <span>solution.{LANGUAGES.find((l) => l[0] === language)?.[2] || "js"}</span>
                   </div>
 
-                  <select
-                    value={language}
-                    onChange={(e) => setLanguage(e.target.value)}
-                    className="rounded-lg border border-white/10 bg-[#121522] px-2.5 py-1 text-xs text-white outline-none"
-                  >
-                    {LANGUAGES.map((l) => (
-                      <option key={l[0]} value={l[0]}>{l[1]}</option>
-                    ))}
-                  </select>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCode(getStarterTemplate(language, selected))}
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-medium text-slate-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 transition"
+                      title="Ushbu til uchun shablonni tiklash"
+                    >
+                      Shablonni tiklash
+                    </button>
+                    <select
+                      value={language}
+                      onChange={(e) => {
+                        const newLang = e.target.value;
+                        setLanguage(newLang);
+                        setCode((prev) => {
+                          if (!prev || prev.trim().length < 30 || prev === selected?.starterCode) {
+                            return getStarterTemplate(newLang, selected);
+                          }
+                          return prev;
+                        });
+                      }}
+                      className="rounded-lg border border-white/10 bg-[#121522] px-2.5 py-1 text-xs text-white outline-none"
+                    >
+                      {LANGUAGES.map((l) => (
+                        <option key={l[0]} value={l[0]}>{l[1]}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 <div className="h-[480px]">
                   <Editor
                     height="100%"
-                    language={language === "csharp" ? "csharp" : language}
+                    language={language === "csharp" ? "csharp" : (language === "react" ? "javascript" : language)}
                     theme="vs-dark"
                     value={code}
                     onChange={(val) => setCode(val || "")}
@@ -3988,6 +4050,9 @@ function ContentView({ toast }) {
 function MessagesView({ toast }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(null);
+  const [selectedTimes, setSelectedTimes] = useState({});
+  const [respondedInvites, setRespondedInvites] = useState({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -4012,12 +4077,50 @@ function MessagesView({ toast }) {
     } catch {}
   }
 
+  async function handleRespond(invitationId, action) {
+    if (!invitationId) return;
+    setActionLoading(invitationId);
+    try {
+      await api.post(`/api/invitations/${invitationId}/respond`, { action });
+      setRespondedInvites((prev) => ({ ...prev, [invitationId]: action }));
+      toast(
+        action === "ACCEPT" ? "success" : "info",
+        action === "ACCEPT" ? "Taklif qabul qilindi!" : "Taklif rad etildi",
+        action === "ACCEPT" ? "Kompaniyaga xabar yuborildi. Suhbat ma'lumotlari kutilmoqda." : ""
+      );
+      load();
+    } catch (err) {
+      toast("error", "Xatolik", apiMessage(err));
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleConfirmInterview(invitationId, timeVal, telegram) {
+    if (!invitationId) return;
+    if (!timeVal) {
+      toast("error", "Vaqt tanlanmadi", "Iltimos, o'zingizga qulay bo'sh vaqtni belgilang yoki kiriting.");
+      return;
+    }
+    setActionLoading(invitationId);
+    try {
+      await api.post(`/api/invitations/${invitationId}/confirm-interview`, { selectedTime: timeVal });
+      setRespondedInvites((prev) => ({ ...prev, [invitationId]: "INTERVIEW_CONFIRMED" }));
+      toast("success", "Suhbat tasdiqlandi!", `Belgilangan vaqt: ${timeVal}. Kompaniya vakili bilan Telegram orqali bog'lanishingiz mumkin.`);
+      load();
+    } catch (err) {
+      toast("error", "Xatolik", apiMessage(err));
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <Header
         eyebrow="Inbox"
-        title="Bildirishnomalar"
-        subtitle="Challenge natijalari, ballar va profilingiz yangilanishlari haqida bildirishnomalar."
+        title="Bildirishnomalar & Takliflar"
+        subtitle="Vakansiyalar, kompaniya takliflari, suhbat jadvali va profilingiz yangilanishlari."
         action={
           <Button variant="secondary" onClick={load} icon={RefreshCw}>
             Yangilash
@@ -4029,30 +4132,220 @@ function MessagesView({ toast }) {
         {loading ? (
           <div className="py-12 text-center text-slate-500 text-xs">Yuklanmoqda...</div>
         ) : items.length === 0 ? (
-          <Empty text="Hali xabarlar yo‘q" sub="Challenge topshirganingizda yoki profilingiz o'zgarganda bildirishnomalar shu yerda chiqadi." />
+          <Empty text="Hali xabarlar yo‘q" sub="Challenge topshirganingizda yoki yangi vakansiya/taklif bo'lganda bildirishnomalar shu yerda chiqadi." />
         ) : (
-          <div className="space-y-2.5">
-            {items.map((item) => (
-              <div
-                key={item.id}
-                onClick={() => markRead(item.id)}
-                className={cn(
-                  "p-4 rounded-xl border transition cursor-pointer flex items-start gap-3.5",
-                  item.read ? "border-white/[0.04] bg-white/[0.01]" : "border-violet-500/30 bg-violet-600/5"
-                )}
-              >
-                <div className={cn("p-2 rounded-lg mt-0.5", item.read ? "bg-white/[0.04] text-slate-500" : "bg-violet-500/20 text-violet-300")}>
-                  <MessageSquare size={16} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-bold text-white text-sm">{item.title}</h4>
-                    <span className="text-[10px] text-slate-500">{new Date(item.createdAt).toLocaleString("uz-UZ")}</span>
+          <div className="space-y-3.5">
+            {items.map((item) => {
+              const data = item.data || {};
+              const invId = data.invitationId;
+              const hasResponded = respondedInvites[invId];
+
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => !item.read && markRead(item.id)}
+                  className={cn(
+                    "p-5 rounded-2xl border transition-all duration-200 text-left space-y-3",
+                    item.type === "company_invitation"
+                      ? "border-cyan-500/30 bg-cyan-950/15"
+                      : item.type === "interview_details"
+                        ? "border-purple-500/40 bg-purple-950/20 shadow-lg shadow-purple-950/20"
+                        : item.type === "job_broadcast"
+                          ? "border-amber-500/25 bg-amber-950/10"
+                          : item.read
+                            ? "border-white/[0.05] bg-white/[0.01]"
+                            : "border-violet-500/30 bg-violet-600/5"
+                  )}
+                >
+                  <div className="flex items-start gap-3.5">
+                    <div className={cn(
+                      "p-2.5 rounded-xl shrink-0 mt-0.5",
+                      item.type === "company_invitation" ? "bg-cyan-500/20 text-cyan-400"
+                        : item.type === "interview_details" ? "bg-purple-500/20 text-purple-300"
+                        : item.type === "job_broadcast" ? "bg-amber-500/20 text-amber-400"
+                        : item.read ? "bg-white/[0.04] text-slate-500" : "bg-violet-500/20 text-violet-300"
+                    )}>
+                      <MessageSquare size={18} />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-white text-sm">{item.title}</h4>
+                          {item.type === "company_invitation" && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                              Kompaniya Taklifi
+                            </span>
+                          )}
+                          {item.type === "interview_details" && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                              Suhbat Belgilash
+                            </span>
+                          )}
+                          {item.type === "job_broadcast" && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                              Yangi Vakansiya
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-slate-500">{new Date(item.createdAt).toLocaleString("uz-UZ")}</span>
+                      </div>
+
+                      <p className="mt-2 text-xs text-slate-300 leading-6 whitespace-pre-line">{item.body}</p>
+
+                      {/* Interactive Section for Company Invitation */}
+                      {item.type === "company_invitation" && invId && (
+                        <div className="mt-3.5 pt-3 border-t border-white/[0.08] flex items-center gap-3 flex-wrap">
+                          {hasResponded === "ACCEPT" ? (
+                            <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20">
+                              <Check size={14} /> Taklif qabul qilindi. Kompaniya suhbat vaqtini yuboradi.
+                            </span>
+                          ) : hasResponded === "DECLINE" ? (
+                            <span className="text-xs text-slate-400 italic">Taklif rad etildi.</span>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                disabled={actionLoading === invId}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRespond(invId, "ACCEPT");
+                                }}
+                                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 cursor-pointer"
+                              >
+                                <Check size={14} /> Taklifni qabul qilish
+                              </button>
+                              <button
+                                type="button"
+                                disabled={actionLoading === invId}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRespond(invId, "DECLINE");
+                                }}
+                                className="px-3.5 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-white text-xs font-medium border border-white/5 transition cursor-pointer"
+                              >
+                                Rad etish
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Interactive Section for Interview Scheduling */}
+                      {item.type === "interview_details" && invId && (
+                        <div className="mt-3.5 p-4 rounded-xl bg-black/40 border border-purple-500/20 space-y-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                            <div className="text-slate-300">
+                              <span className="text-slate-500 block text-[10px] uppercase font-bold">Format:</span>
+                              <span className="font-semibold text-white">{data.interviewDetails?.type || "Online"}</span>
+                            </div>
+                            <div className="text-slate-300">
+                              <span className="text-slate-500 block text-[10px] uppercase font-bold">Manzil / Havola:</span>
+                              <span className="font-semibold text-cyan-300">{data.interviewDetails?.locationOrLink || "Kompaniya orqali"}</span>
+                            </div>
+                            {data.interviewDetails?.telegramUsername && (
+                              <div className="text-slate-300">
+                                <span className="text-slate-500 block text-[10px] uppercase font-bold">HR / Kompaniya Telegram:</span>
+                                <a
+                                  href={`https://t.me/${data.interviewDetails.telegramUsername.replace("@", "")}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="font-bold text-cyan-400 hover:underline inline-flex items-center gap-1"
+                                >
+                                  @{data.interviewDetails.telegramUsername.replace("@", "")}
+                                </a>
+                              </div>
+                            )}
+                            {data.interviewDetails?.companyEmail && (
+                              <div className="text-slate-300">
+                                <span className="text-slate-500 block text-[10px] uppercase font-bold">Email:</span>
+                                <span className="text-slate-300">{data.interviewDetails.companyEmail}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {hasResponded === "INTERVIEW_CONFIRMED" ? (
+                            <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-2">
+                              <Check size={16} className="text-emerald-400" />
+                              <span>Suhbat vaqti tasdiqlandi! Kompaniya vakili Telegram orqali siz bilan bog'lanadi.</span>
+                            </div>
+                          ) : (
+                            <div className="space-y-2 pt-2 border-t border-white/[0.08]">
+                              <span className="text-[11px] font-bold text-purple-300 block">
+                                O'zingizga qulay vaqtni tanlang yoki kiriting:
+                              </span>
+
+                              {/* Proposed times chips */}
+                              {data.interviewDetails?.proposedTimes && data.interviewDetails.proposedTimes.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                  {data.interviewDetails.proposedTimes.map((tStr) => (
+                                    <button
+                                      key={tStr}
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedTimes((prev) => ({ ...prev, [invId]: tStr }));
+                                      }}
+                                      className={cn(
+                                        "px-3 py-1.5 rounded-lg text-xs font-medium border transition cursor-pointer",
+                                        selectedTimes[invId] === tStr
+                                          ? "bg-purple-600 text-white border-purple-400"
+                                          : "bg-white/[0.04] text-slate-300 border-white/10 hover:border-white/20"
+                                      )}
+                                    >
+                                      {tStr}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Custom time slot input */}
+                              <div className="flex items-center gap-2 pt-1">
+                                <input
+                                  value={selectedTimes[invId] || ""}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setSelectedTimes((prev) => ({ ...prev, [invId]: val }));
+                                  }}
+                                  placeholder="Masalan: Ertaga soat 15:00 da yoki Indinga 11:30 da"
+                                  className="flex-1 px-3 py-2 bg-[#121522] border border-white/10 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-400"
+                                />
+                                <button
+                                  type="button"
+                                  disabled={actionLoading === invId || !selectedTimes[invId]}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleConfirmInterview(invId, selectedTimes[invId], data.interviewDetails?.telegramUsername);
+                                  }}
+                                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-500 hover:opacity-95 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-purple-500/20 cursor-pointer disabled:opacity-50"
+                                >
+                                  <Check size={14} /> Roziman
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Vacancy Broadcast Action */}
+                      {item.type === "job_broadcast" && data.telegramUsername && (
+                        <div className="mt-3 pt-2.5 border-t border-white/[0.06] flex items-center gap-3">
+                          <a
+                            href={`https://t.me/${data.telegramUsername.replace("@", "")}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 text-xs font-bold border border-cyan-500/30 transition"
+                          >
+                            HR bilan Telegram orqali bog'lanish (@{data.telegramUsername.replace("@", "")}) →
+                          </a>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <p className="mt-1 text-xs text-slate-400 leading-5">{item.body}</p>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </Glass>
