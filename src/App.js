@@ -567,7 +567,7 @@ function Sidebar({ view, setView, onLogout, user, mobileOpen, setMobileOpen }) {
     <>
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-[260px] border-r border-white/[0.08] bg-[#090a11]/95 px-5 py-6 lg:flex lg:flex-col backdrop-blur-2xl">
         <div className="flex items-center gap-3">
-          <img src="/AslKod_logo.png" alt="AslKod UZ Logo" className="w-9 h-9 object-contain rounded-xl" />
+          <img src="/AslKod.png" alt="AslKod UZ Logo" className="w-9 h-9 object-contain rounded-xl shadow-lg shadow-violet-500/10" />
           <div>
             <div className="font-black tracking-tight text-base text-white">
               AslKod <span className="text-violet-400">UZ</span>
@@ -627,7 +627,7 @@ function Sidebar({ view, setView, onLogout, user, mobileOpen, setMobileOpen }) {
             <div>
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
-                  <img src="/AslKod_logo.png" alt="AslKod UZ Logo" className="w-8 h-8 object-contain rounded-xl" />
+                  <img src="/AslKod.png" alt="AslKod UZ Logo" className="w-8 h-8 object-contain rounded-xl shadow-lg shadow-violet-500/10" />
                   <div className="font-black text-lg">AslKod UZ</div>
                 </div>
                 <button type="button" onClick={() => setMobileOpen(false)} className="text-slate-400">
