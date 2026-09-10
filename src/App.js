@@ -65,8 +65,8 @@ const API_BASE_URL = isLocal
   : (typeof process !== "undefined" && process.env?.REACT_APP_API_URL) || "https://devrank-backend-production.up.railway.app";
 
 const STORAGE = {
-  token: "AslKod_token",
-  user: "AslKod_user",
+  token: "MaqsadCode_token",
+  user: "MaqsadCode_user",
 };
 
 const api = axios.create({
@@ -75,7 +75,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem(STORAGE.token);
+  const token = localStorage.getItem(STORAGE.token) || localStorage.getItem("AslKod_token") || localStorage.getItem("devrank_token");
   if (token) {
     config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${token}`;
@@ -112,7 +112,7 @@ function formatScore(value) {
 function triggerDesktopNotification(title, bodyOrOptions) {
   if (typeof window !== "undefined" && "Notification" in window) {
     const opts = typeof bodyOrOptions === "string" ? { body: bodyOrOptions } : (bodyOrOptions || {});
-    const finalOpts = { icon: "/AslKod.favicon.ico", ...opts };
+    const finalOpts = { icon: "/maqsad.favicon.ico", ...opts };
     if (Notification.permission === "granted") {
       try {
         new Notification(title, finalOpts);
@@ -410,10 +410,9 @@ function AuthView({ onAuthenticated, toast }) {
         <div className="hidden lg:flex flex-col justify-between p-10 border-r border-white/10 bg-gradient-to-br from-violet-950/20 via-black to-[#07080e]">
           <div>
             <div className="flex items-center gap-3">
-              <img src="/AslKod.png" alt="AslKod UZ Logo" className="w-10 h-10 object-contain rounded-xl" />
+              <img src="/maqsad.png" alt="MaqsadCode Logo" className="w-10 h-10 object-contain rounded-xl" />
               <div>
-                <span className="font-black text-xl tracking-tight">AslKod</span>{" "}
-                <span className="font-bold text-xs bg-violet-500/20 text-violet-300 px-2 py-0.5 rounded-full border border-violet-500/30">UZ</span>
+                <span className="font-black text-xl tracking-tight">MaqsadCode</span>
               </div>
             </div>
 
@@ -423,7 +422,7 @@ function AuthView({ onAuthenticated, toast }) {
                 O‘zbekiston dasturchilarining <span className="bg-gradient-to-r from-violet-400 to-cyan-300 bg-clip-text text-transparent">haqiqiy reyting platformasi</span>
               </h1>
               <p className="mt-4 text-sm text-slate-400 leading-6">
-                AslKod UZ - bu O‘zbekiston dasturchilarining haqiqiy ko‘rsatkichlarini aniqlash va reytinglash uchun yaratilgan platforma. Har bir foydalanuvchi o‘zining real kodlash qobiliyatini sinab ko‘rishi va boshqa dasturchilar bilan solishtirishi mumkin.
+                MaqsadCode - bu O‘zbekiston dasturchilarining haqiqiy ko‘rsatkichlarini aniqlash va reytinglash uchun yaratilgan platforma. Har bir foydalanuvchi o‘zining real kodlash qobiliyatini sinab ko‘rishi va boshqa dasturchilar bilan solishtirishi mumkin.
               </p>
             </div>
           </div>
@@ -446,7 +445,7 @@ function AuthView({ onAuthenticated, toast }) {
             <div className="mb-6">
               <h2 className="text-2xl font-black text-white">{mode === "login" ? "Tizimga kirish" : "Ro‘yxatdan o‘tish"}</h2>
               <p className="text-xs text-slate-400 mt-1">
-                {mode === "login" ? "AslKod hisobingiz orqali platformaga kiring." : "Yangi dasturchi profili yarating va reytingda qatnashing."}
+                {mode === "login" ? "MaqsadCode hisobingiz orqali platformaga kiring." : "Yangi dasturchi profili yarating va reytingda qatnashing."}
               </p>
             </div>
 
@@ -568,12 +567,12 @@ function Sidebar({ view, setView, onLogout, user, mobileOpen, setMobileOpen }) {
     <>
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-[260px] border-r border-white/[0.08] bg-[#090a11]/95 px-5 py-6 lg:flex lg:flex-col backdrop-blur-2xl">
         <div className="flex items-center gap-3">
-          <img src="/AslKod.png" alt="AslKod UZ Logo" className="w-9 h-9 object-contain rounded-xl shadow-lg shadow-violet-500/10" />
+          <img src="/maqsad.png" alt="MaqsadCode Logo" className="w-9 h-9 object-contain rounded-xl shadow-lg shadow-violet-500/10" />
           <div>
             <div className="font-black tracking-tight text-base text-white">
-              AslKod <span className="text-violet-400">UZ</span>
+              MaqsadCode
             </div>
-            <div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Education</div>
+            <div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Platforma</div>
           </div>
         </div>
 
@@ -628,8 +627,8 @@ function Sidebar({ view, setView, onLogout, user, mobileOpen, setMobileOpen }) {
             <div>
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
-                  <img src="/AslKod.png" alt="AslKod UZ Logo" className="w-8 h-8 object-contain rounded-xl shadow-lg shadow-violet-500/10" />
-                  <div className="font-black text-lg">AslKod UZ</div>
+                  <img src="/maqsad.png" alt="MaqsadCode Logo" className="w-8 h-8 object-contain rounded-xl shadow-lg shadow-violet-500/10" />
+                  <div className="font-black text-lg">MaqsadCode</div>
                 </div>
                 <button type="button" onClick={() => setMobileOpen(false)} className="text-slate-400">
                   <X size={20} />
@@ -821,7 +820,7 @@ function DashboardView({ user, leaderboard, setView, toast, refreshUser }) {
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Start: 0 pts</span>
               </div>
               <p className="text-xs text-slate-300 mt-1.5 leading-5 max-w-3xl">
-                <strong>AslKod UZ nima qiladi?</strong> Bu yerda siz turli yo'nalishlar (Web, AI, Cyber, UI/UX) bo'yicha amaliy topshiriqlarni yechasiz, jonli jamoaviy musobaqalarda qatnashasiz va O'zbekistonning eng kuchli dasturchilari reytingida 1-o'ringa ko'tarilasiz!
+                <strong>MaqsadCode nima qiladi?</strong> Bu yerda siz turli yo'nalishlar (Web, AI, Cyber, UI/UX) bo'yicha amaliy topshiriqlarni yechasiz, jonli jamoaviy musobaqalarda qatnashasiz va O'zbekistonning eng kuchli dasturchilari reytingida 1-o'ringa ko'tarilasiz!
               </p>
             </div>
           </div>
@@ -1167,11 +1166,291 @@ function LeaderboardView({ toast, onOpenProfile }) {
   );
 }
 
-// ----------------- AI CODE LAB VIEW -----------------
+// ----------------- PROCTORING & ANTI-CHEAT SYSTEM -----------------
+function ProctoringWatermark({ user }) {
+  const [time, setTime] = useState(() => new Date().toLocaleTimeString("uz-UZ"));
+  useEffect(() => {
+    const t = setInterval(() => setTime(new Date().toLocaleTimeString("uz-UZ")), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const watermarkText = `MaqsadCode SECURE PROCTOR • ${user?.name || "Nomzod"} • ${user?.email || "candidate@maqsadcode.uz"} • ${time}`;
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-30 overflow-hidden select-none opacity-[0.06] flex flex-col justify-around rotate-[-12deg] scale-125">
+      {Array.from({ length: 12 }).map((_, i) => (
+        <div key={i} className="whitespace-nowrap text-white font-mono text-xs font-black tracking-widest">
+          {Array.from({ length: 4 }).map((_, j) => (
+            <span key={j} className="mx-8">{watermarkText}</span>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CameraVerificationModal({ isOpen, onClose, onVerified, title = "Kamera Nazorati Tekshiruvi" }) {
+  const [requesting, setRequesting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [stream, setStream] = useState(null);
+  const videoRef = useRef(null);
+
+  const requestCamera = async () => {
+    setRequesting(true);
+    setErrorMsg("");
+    try {
+      if (!navigator?.mediaDevices?.getUserMedia) {
+        throw new Error("Brauzeringiz kamera qurilmasini qo'llab-quvvatlamaydi.");
+      }
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" },
+        audio: false,
+      });
+      setStream(mediaStream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+    } catch (err) {
+      console.error("Camera access error:", err);
+      let msg = "Kameraga ruxsat berilmadi yoki kamera topilmadi!";
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        msg = "Kameraga kirish taqiqlandi! Brauzer manzil qatoridagi qulf belgisini bosib, kameraga ruxsat bering.";
+      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+        msg = "Kompyuteringiz yoki telefoningizda faol veb-kamera topilmadi.";
+      }
+      setErrorMsg(msg);
+    } finally {
+      setRequesting(false);
+    }
+  };
+
+  const handleConfirm = () => {
+    if (!stream) return;
+    onVerified(stream);
+  };
+
+  const handleCancel = () => {
+    if (stream) {
+      try {
+        stream.getTracks().forEach((t) => t.stop());
+      } catch (e) {}
+      setStream(null);
+    }
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
+      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#0d0f17] p-6 shadow-2xl text-white space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="p-3 rounded-2xl bg-violet-600/20 text-violet-400 border border-violet-500/30">
+            <Camera size={24} />
+          </div>
+          <div>
+            <h3 className="text-base font-bold">{title}</h3>
+            <p className="text-xs text-slate-400">Halollik va xavfsizlik tekshiruvi</p>
+          </div>
+        </div>
+
+        <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 text-xs text-slate-300 leading-relaxed">
+          MaqsadCode platformasida topshiriq va musobaqalarni yechishda <strong>veb-kamera orqali AI nazorati majburiydir</strong>. Kamerasiz testga kirish qat'iyan taqiqlanadi.
+        </div>
+
+        {/* Video preview box */}
+        <div className="relative aspect-video w-full rounded-2xl bg-black/60 border border-white/10 overflow-hidden flex items-center justify-center">
+          {stream ? (
+            <video
+              ref={(el) => {
+                videoRef.current = el;
+                if (el && stream && el.srcObject !== stream) {
+                  el.srcObject = stream;
+                }
+              }}
+              autoPlay
+              playsInline
+              muted
+              className="w-full h-full object-cover scale-x-[-1]"
+            />
+          ) : (
+            <div className="text-center p-4 space-y-2">
+              <Camera size={36} className="mx-auto text-slate-600" />
+              <p className="text-xs text-slate-400">Kamera hali yoqilmagan</p>
+            </div>
+          )}
+          {stream && (
+            <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold flex items-center gap-1.5 backdrop-blur-md">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              Kamera faol
+            </div>
+          )}
+        </div>
+
+        {errorMsg && (
+          <div className="p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-300 text-xs flex items-start gap-2">
+            <AlertCircle size={16} className="shrink-0 mt-0.5" />
+            <div className="leading-5">{errorMsg}</div>
+          </div>
+        )}
+
+        <div className="flex gap-2 pt-2">
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="flex-1 py-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 font-bold text-xs transition"
+          >
+            Bekor qilish
+          </button>
+          {!stream ? (
+            <button
+              type="button"
+              disabled={requesting}
+              onClick={requestCamera}
+              className="flex-1 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-bold text-xs transition flex items-center justify-center gap-2"
+            >
+              {requesting ? <Loader2 size={15} className="animate-spin" /> : <Camera size={15} />}
+              <span>Kamerani yoqish</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleConfirm}
+              className="flex-1 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:opacity-95 text-white font-bold text-xs transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+            >
+              <Check size={15} />
+              <span>Testga kirish 🚀</span>
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProctoringCameraWidget({ stream, onSuspicionDetected, userName = "Nomzod" }) {
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const prevFrameRef = useRef(null);
+  const darknessCountRef = useRef(0);
+  const anomalyCountRef = useRef(0);
+
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+    }
+
+    const track = stream?.getVideoTracks()?.[0];
+    if (track) {
+      track.onended = () => {
+        onSuspicionDetected("Kamera o'chirib qo'yildi (Video stream to'xtatildi)");
+      };
+    }
+  }, [stream, onSuspicionDetected]);
+
+  // AI Presence & Motion Analysis Loop
+  useEffect(() => {
+    if (!stream) return;
+
+    const interval = setInterval(() => {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      if (!video || !canvas || video.readyState !== 4) return;
+
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) return;
+
+      const width = 160;
+      const height = 120;
+      ctx.drawImage(video, 0, 0, width, height);
+
+      try {
+        const frame = ctx.getImageData(0, 0, width, height);
+        const data = frame.data;
+        let totalBrightness = 0;
+        const pixelCount = data.length / 4;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const b = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+          totalBrightness += b;
+        }
+        const avgBrightness = totalBrightness / pixelCount;
+
+        // 1. Check if camera is covered / blacked out
+        if (avgBrightness < 8) {
+          darknessCountRef.current += 1;
+          if (darknessCountRef.current >= 4) {
+            onSuspicionDetected("Kamera yopib qo'yilgan yoki o'ta qorong'i (Kamera nazorati buzildi)");
+            return;
+          }
+        } else {
+          darknessCountRef.current = 0;
+        }
+
+        // 2. Motion / Difference Analysis
+        if (prevFrameRef.current) {
+          let diffSum = 0;
+          const prev = prevFrameRef.current;
+          for (let i = 0; i < data.length; i += 8) {
+            diffSum += Math.abs(data[i] - prev[i]) + Math.abs(data[i + 1] - prev[i + 1]) + Math.abs(data[i + 2] - prev[i + 2]);
+          }
+          const avgDiff = diffSum / (pixelCount / 2);
+
+          if (avgDiff > 70) {
+            anomalyCountRef.current += 1;
+            if (anomalyCountRef.current >= 4) {
+              onSuspicionDetected("Kamerada telefon yoki g'ayrioddiy harakatlar aniqlandi");
+              return;
+            }
+          } else {
+            anomalyCountRef.current = 0;
+          }
+        }
+
+        prevFrameRef.current = new Uint8ClampedArray(data);
+      } catch (e) {
+        console.warn("Proctoring frame read:", e);
+      }
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [stream, onSuspicionDetected]);
+
+  return (
+    <div className="fixed bottom-4 right-4 z-40 w-44 sm:w-52 rounded-2xl overflow-hidden border border-violet-500/40 bg-black/90 shadow-2xl shadow-violet-950/40 backdrop-blur-xl">
+      <div className="relative aspect-video w-full bg-slate-950">
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="w-full h-full object-cover scale-x-[-1]"
+        />
+        <canvas ref={canvasRef} width="160" height="120" className="hidden" />
+        <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-md border border-white/10 text-[9px] font-bold text-emerald-400">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+          AI Proctoring
+        </div>
+      </div>
+      <div className="px-3 py-1.5 bg-[#0e1018] border-t border-white/10 flex items-center justify-between text-[10px]">
+        <span className="font-semibold text-white truncate max-w-[120px]">{userName}</span>
+        <span className="text-emerald-400 font-bold">Faol</span>
+      </div>
+    </div>
+  );
+}
+
+const DIFFICULTIES = [
+  { id: "all", label: "Barchasi" },
+  { id: "easy", label: "Oson (Easy)" },
+  { id: "medium", label: "O'rta (Medium)" },
+  { id: "hard", label: "Qiyin (Hard)" },
+  { id: "extreme", label: "Ekstremal (Extreme) ⚡" },
+];
+
 function getStarterTemplate(lang, challenge) {
   const title = challenge?.title || "Vazifa";
   if (lang === "python") {
-    return `# ${title}\ndef solve(*args):\n    # Yechimingizni shu yerga yozing\n    pass\n`;
+    return `# ${title}\n# Diqqat: Asosiy funksiya nomini 'solve' deb qoldiring\n\ndef solve(*args):\n    # Yechimingizni shu yerga yozing\n    pass\n`;
   }
   if (lang === "cpp") {
     return `// ${title}\n#include <iostream>\n#include <vector>\n#include <string>\nusing namespace std;\n\n// Yechimingizni shu yerga yozing\nint solve() {\n    return 0;\n}\n`;
@@ -1188,8 +1467,9 @@ function getStarterTemplate(lang, challenge) {
   return challenge?.starterCode || `function solve(...args) {\n  // Yechimingizni shu yerga yozing\n  \n}`;
 }
 
-function CodeLabView({ toast, refreshUser }) {
+function CodeLabView({ toast, refreshUser, user }) {
   const [category, setCategory] = useState("web");
+  const [difficultyFilter, setDifficultyFilter] = useState("all");
   const [challenges, setChallenges] = useState([]);
   const [selected, setSelected] = useState(null);
   const [language, setLanguage] = useState("javascript");
@@ -1200,6 +1480,11 @@ function CodeLabView({ toast, refreshUser }) {
   const [challengeTimeLeft, setChallengeTimeLeft] = useState(null);
   const [labDisqualified, setLabDisqualified] = useState(false);
   const labSafeExitRef = useRef(false);
+
+  // Camera stream & modal state
+  const [cameraStream, setCameraStream] = useState(null);
+  const [showCameraModal, setShowCameraModal] = useState(false);
+  const [pendingChallenge, setPendingChallenge] = useState(null);
 
   useEffect(() => {
     if (!selected) {
@@ -1218,8 +1503,9 @@ function CodeLabView({ toast, refreshUser }) {
       }
     } catch (e) {}
 
-    // Per-challenge timers: 120s (2 min) for Quiz, 600s (10 min) for Code
-    const initial = selected.type === "QUIZ" ? 120 : (selected.difficulty === "hard" ? 900 : 600);
+    // Per-challenge timers: 120s (2 min) for Quiz, 600s for Easy/Med, 900s for Hard, 1200s for Extreme
+    const diff = selected.difficulty?.toLowerCase();
+    const initial = selected.type === "QUIZ" ? 120 : (diff === "extreme" ? 1200 : (diff === "hard" ? 900 : 600));
     setChallengeTimeLeft(initial);
 
     const timer = setInterval(() => {
@@ -1272,10 +1558,64 @@ function CodeLabView({ toast, refreshUser }) {
     };
   }, [selected, toast]);
 
+  // Anti-Screenshot and DevTools Protection
+  useEffect(() => {
+    if (!selected) return;
+
+    const handleKeyDown = (e) => {
+      // PrintScreen
+      if (e.key === "PrintScreen" || e.keyCode === 44) {
+        e.preventDefault();
+        try {
+          if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText("Maxfiy kontent — MaqsadCode xavfsizligi!").catch(() => {});
+          }
+        } catch (err) {}
+        toast("error", "Skrinshot taqiqlangan!", "Ekranni rasmga olish yoki skrinshot qilish qat'iyan taqiqlanadi!");
+      }
+
+      // DevTools
+      if (
+        e.key === "F12" ||
+        (e.ctrlKey && e.shiftKey && ["I", "i", "J", "j", "C", "c"].includes(e.key)) ||
+        (e.ctrlKey && ["U", "u"].includes(e.key)) ||
+        (e.metaKey && e.altKey && ["I", "i", "J", "j"].includes(e.key))
+      ) {
+        e.preventDefault();
+        toast("error", "DevTools bloklangan!", "Dasturchi asboblarini ochish taqiqlangan!");
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      if (e.key === "PrintScreen" || e.keyCode === 44) {
+        e.preventDefault();
+        try {
+          if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText("").catch(() => {});
+          }
+        } catch (err) {}
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [selected, toast]);
+
   function closeChallengeSafely() {
     labSafeExitRef.current = true;
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(() => {});
+    }
+    if (cameraStream) {
+      try {
+        cameraStream.getTracks().forEach((t) => t.stop());
+      } catch (e) {}
+      setCameraStream(null);
     }
     setSelected(null);
     setLabDisqualified(false);
@@ -1298,6 +1638,29 @@ function CodeLabView({ toast, refreshUser }) {
     setResult(null);
     setQuizAnswer(null);
   }, [loadChallenges]);
+
+  function requestChallengeEntry(item) {
+    if (cameraStream && cameraStream.active && cameraStream.getVideoTracks().some((t) => t.readyState === "live")) {
+      openChallenge(item);
+    } else {
+      setPendingChallenge(item);
+      setShowCameraModal(true);
+    }
+  }
+
+  function handleCameraVerified(stream) {
+    setCameraStream(stream);
+    setShowCameraModal(false);
+    if (pendingChallenge) {
+      openChallenge(pendingChallenge);
+      setPendingChallenge(null);
+    }
+  }
+
+  function handleCameraCancel() {
+    setShowCameraModal(false);
+    setPendingChallenge(null);
+  }
 
   async function openChallenge(item) {
     try {
@@ -1423,21 +1786,49 @@ function CodeLabView({ toast, refreshUser }) {
 
       {!selected ? (
         <Glass className="p-6">
-          <div className="mb-4">
-            <h3 className="text-lg font-bold text-white">
-              {CATEGORIES.find((c) => c.id === category)?.title} Topshiriqlari
-            </h3>
-            <p className="text-xs text-slate-400">{challenges.length} ta mavjud topshiriq</p>
+          <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <h3 className="text-lg font-bold text-white">
+                {CATEGORIES.find((c) => c.id === category)?.title} Topshiriqlari
+              </h3>
+              <p className="text-xs text-slate-400">
+                {challenges.filter((c) => difficultyFilter === "all" || c.difficulty?.toLowerCase() === difficultyFilter.toLowerCase()).length} ta mavjud topshiriq
+              </p>
+            </div>
+
+            {/* Difficulty Filter Bar */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {DIFFICULTIES.map((d) => {
+                const active = difficultyFilter === d.id;
+                return (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => setDifficultyFilter(d.id)}
+                    className={cn(
+                      "px-3 py-1 rounded-xl text-xs font-bold border transition",
+                      active
+                        ? "bg-violet-600 text-white border-violet-500 shadow-sm shadow-violet-600/30"
+                        : "bg-white/[0.03] text-slate-400 hover:text-white border-white/10 hover:border-white/20"
+                    )}
+                  >
+                    {d.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          {challenges.length === 0 ? (
+          {challenges.filter((c) => difficultyFilter === "all" || c.difficulty?.toLowerCase() === difficultyFilter.toLowerCase()).length === 0 ? (
             <Empty text="Hali challenge mavjud emas" sub="Tez orada yangi topshiriqlar qo'shiladi." />
           ) : (
             <div className="grid md:grid-cols-2 gap-4">
-              {challenges.map((item) => (
+              {challenges
+                .filter((c) => difficultyFilter === "all" || c.difficulty?.toLowerCase() === difficultyFilter.toLowerCase())
+                .map((item) => (
                 <Glass
                   key={item.id}
-                  onClick={() => !item.locked && openChallenge(item)}
+                  onClick={() => !item.locked && requestChallengeEntry(item)}
                   className={cn(
                     "p-5 transition cursor-pointer relative",
                     item.isSuspicious
@@ -1460,12 +1851,14 @@ function CodeLabView({ toast, refreshUser }) {
                         {item.type}
                       </span>
                       <span className={cn(
-                        "text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border",
+                        "text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border flex items-center gap-1",
                         item.difficulty?.toLowerCase() === "easy" ? "bg-green-500/10 text-green-300 border-green-500/20"
                           : item.difficulty?.toLowerCase() === "medium" ? "bg-yellow-500/10 text-yellow-300 border-yellow-500/20"
                           : item.difficulty?.toLowerCase() === "hard" ? "bg-orange-500/10 text-orange-300 border-orange-500/20"
+                          : item.difficulty?.toLowerCase() === "extreme" ? "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/40 font-black animate-pulse shadow-sm shadow-fuchsia-500/20"
                           : "bg-red-500/10 text-red-300 border-red-500/20"
                       )}>
+                        {item.difficulty?.toLowerCase() === "extreme" && <Flame size={10} className="text-fuchsia-400" />}
                         {item.difficulty}
                       </span>
                       {item.isSuspicious && (
@@ -1513,8 +1906,20 @@ function CodeLabView({ toast, refreshUser }) {
           )}
         </Glass>
       ) : (
-        /* 3-Column Challenge Workspace */
-        <div className="grid xl:grid-cols-[0.8fr_1.3fr_0.9fr] gap-4 items-start">
+        /* 3-Column Challenge Workspace with Proctoring */
+        <div
+          className="relative grid xl:grid-cols-[0.8fr_1.3fr_0.9fr] gap-4 items-start select-none"
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          {/* Watermark Protection */}
+          <ProctoringWatermark user={user} />
+
+          {/* Floating AI Proctoring Camera Widget */}
+          <ProctoringCameraWidget
+            stream={cameraStream}
+            onSuspicionDetected={reportSuspicion}
+            userName={user?.name}
+          />
           {/* Left: Problem Description */}
           <Glass className="p-5 space-y-4">
             <button
@@ -1767,7 +2172,7 @@ function CodeLabView({ toast, refreshUser }) {
                   </>
                 ) : (
                   <div className="text-slate-600">
-                    › $ AslKod runner ready...<br />
+                    › $ MaqsadCode runner ready...<br />
                     › Kodni yozib "Run Tests" tugmasini bosing.
                   </div>
                 )}
@@ -1813,6 +2218,14 @@ function CodeLabView({ toast, refreshUser }) {
           </div>
         </div>
       )}
+
+      {/* Mandatory Camera Verification Modal */}
+      <CameraVerificationModal
+        isOpen={showCameraModal}
+        onClose={handleCameraCancel}
+        onVerified={handleCameraVerified}
+        title="AI Code Lab — Majburiy Kamera Nazorati"
+      />
     </div>
   );
 }
@@ -2749,7 +3162,7 @@ function CompetitionResultsModal({ compId, onClose, user, toast }) {
 }
 
 // ----------------- COMPETITION ARENA (50 QUESTIONS) -----------------
-function CompetitionArena({ compId, onBack, toast, user }) {
+function CompetitionArena({ compId, onBack, toast, user, cameraStream }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeIdx, setActiveIdx] = useState(0);
@@ -2864,9 +3277,28 @@ function CompetitionArena({ compId, onBack, toast, user }) {
       }
     };
 
+    const handleKeySecurity = (e) => {
+      if (e.key === "PrintScreen") {
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText("MaqsadCode Xavfsizlik: Skrinshot olish taqiqlangan!").catch(() => {});
+        }
+        toast("error", "Skrinshot bloklandi", "Platforma ichida skrinshot olish qat'iyan man etiladi!");
+      }
+      if (
+        e.key === "F12" ||
+        (e.ctrlKey && e.shiftKey && (e.key === "I" || e.key === "i" || e.key === "J" || e.key === "j" || e.key === "C" || e.key === "c")) ||
+        (e.ctrlKey && (e.key === "U" || e.key === "u"))
+      ) {
+        e.preventDefault();
+        triggerDisqualification("DevTools / Kod tekshirgichni ochishga urinish!");
+      }
+    };
+
     window.history.pushState(null, "", window.location.href);
     window.addEventListener("popstate", handlePopState);
     window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("keyup", handleKeySecurity);
+    window.addEventListener("keydown", handleKeySecurity);
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("blur", handleWindowBlur);
@@ -2875,11 +3307,13 @@ function CompetitionArena({ compId, onBack, toast, user }) {
     return () => {
       window.removeEventListener("popstate", handlePopState);
       window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("keyup", handleKeySecurity);
+      window.removeEventListener("keydown", handleKeySecurity);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("blur", handleWindowBlur);
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
     };
-  }, [triggerDisqualification, isDisqualified]);
+  }, [triggerDisqualification, isDisqualified, toast]);
 
   async function confirmFinish(e) {
     e?.preventDefault();
@@ -2985,7 +3419,7 @@ function CompetitionArena({ compId, onBack, toast, user }) {
             <strong>Sabab:</strong> {disqualifiedReason || "Boshqa oynaga o'tish yoki to'liq ekrandan chiqish qoidabuzarligi aniqlandi."}
           </div>
           <p className="text-xs text-slate-400 leading-5">
-            AslKod musobaqalarida halollik qat'iy nazorat qilinadi. Boshqa ilovaga yoki tabga o'tish qat'iyan taqiqlangan.
+            MaqsadCode musobaqalarida halollik qat'iy nazorat qilinadi. Boshqa ilovaga yoki tabga o'tish qat'iyan taqiqlangan.
             <br /><br />
             <span className="text-amber-400 font-semibold">Qayta kirish imkoniyati faqat admin tomonidan ruxsat berilgandan so'ng ochiladi.</span>
           </p>
@@ -3028,7 +3462,21 @@ function CompetitionArena({ compId, onBack, toast, user }) {
   const isEnded = new Date(data.competition.endsAt) <= new Date();
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300 select-none">
+    <div
+      className="relative space-y-6 animate-in fade-in duration-300 select-none"
+      onContextMenu={(e) => e.preventDefault()}
+      onCopy={(e) => e.preventDefault()}
+    >
+      {/* Dynamic Watermark Protection */}
+      <ProctoringWatermark user={user} />
+
+      {/* Floating AI Proctoring Camera Widget */}
+      <ProctoringCameraWidget
+        stream={cameraStream}
+        onSuspicionDetected={triggerDisqualification}
+        userName={user?.name}
+      />
+
       {/* Top Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -3549,7 +3997,7 @@ function CompetitionRulesModal({ onClose }) {
             <div className="space-y-1">
               <div className="text-xs font-bold text-emerald-300">5. G'OLIBLAR VA RASMIY DIPLOM</div>
               <p className="text-[12px] text-slate-300 leading-relaxed">
-                Musobaqa yakunida g'olib bo'lgan jamoa a'zolariga <strong>Rasmiy AslKod G'oliblik Diplomi</strong> ochiladi hamda tashkilotchilar bilan to'g'ridan-to'g'ri bog'lanish shakli taqdim etiladi!
+                Musobaqa yakunida g'olib bo'lgan jamoa a'zolariga <strong>Rasmiy MaqsadCode G'oliblik Diplomi</strong> ochiladi hamda tashkilotchilar bilan to'g'ridan-to'g'ri bog'lanish shakli taqdim etiladi!
               </p>
             </div>
           </div>
@@ -3581,6 +4029,27 @@ function CompetitionsView({ toast, user }) {
   const [inArena, setInArena] = useState(false);
   const [showResultsModal, setShowResultsModal] = useState(null);
   const [showRulesModal, setShowRulesModal] = useState(false);
+  const [cameraStream, setCameraStream] = useState(null);
+  const [showCameraModal, setShowCameraModal] = useState(false);
+
+  const handleCameraVerified = (stream) => {
+    setCameraStream(stream);
+    setShowCameraModal(false);
+    setInArena(true);
+  };
+
+  const handleCameraCancel = () => {
+    setShowCameraModal(false);
+    toast("warning", "Kamera talab qilinadi", "Kamerasiz musobaqaga kirish qat'iyan man etiladi!");
+  };
+
+  const handleExitArena = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((t) => t.stop());
+      setCameraStream(null);
+    }
+    setInArena(false);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -3598,7 +4067,7 @@ function CompetitionsView({ toast, user }) {
       });
       if (activeComp) {
         triggerDesktopNotification(
-          "AslKod UZ Musobaqa Boshlandi! 🏆",
+          "MaqsadCode Musobaqa Boshlandi! 🏆",
           `"${activeComp.title}" musobaqasi boshlandi! Jamoangiz bilan bellashuvga kiring va 500 ball yuting!`
         );
       }
@@ -3638,9 +4107,10 @@ function CompetitionsView({ toast, user }) {
     return (
       <CompetitionArena
         compId={selectedComp.id}
-        onBack={() => setInArena(false)}
+        onBack={handleExitArena}
         toast={toast}
         user={user}
+        cameraStream={cameraStream}
       />
     );
   }
@@ -3743,8 +4213,8 @@ function CompetitionsView({ toast, user }) {
               ) : (
                 <button
                   type="button"
-                  onClick={() => setInArena(true)}
-                  className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-black uppercase tracking-wider transition shadow-[0_0_20px_rgba(124,58,237,0.4)] flex items-center gap-2"
+                  onClick={() => setShowCameraModal(true)}
+                  className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-black uppercase tracking-wider transition shadow-[0_0_20px_rgba(124,58,237,0.4)] flex items-center gap-2 cursor-pointer"
                 >
                   <Play size={14} /> Maydonga Kirish
                 </button>
@@ -3823,6 +4293,13 @@ function CompetitionsView({ toast, user }) {
             toast={toast}
           />
         )}
+
+        <CameraVerificationModal
+          isOpen={showCameraModal}
+          onClose={handleCameraCancel}
+          onVerified={handleCameraVerified}
+          title="MaqsadCode Musobaqa — Majburiy Kamera Nazorati"
+        />
       </div>
     );
   }
@@ -4592,7 +5069,7 @@ function App() {
       return <LeaderboardView toast={toast} onOpenProfile={openProfile} />;
     }
     if (view === "code") {
-      return <CodeLabView toast={toast} refreshUser={refreshUser} />;
+      return <CodeLabView toast={toast} refreshUser={refreshUser} user={user} />;
     }
     if (view === "profile") {
       const target = profileOverride || user;
