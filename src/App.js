@@ -65,8 +65,8 @@ const API_BASE_URL = isLocal
   : (typeof process !== "undefined" && process.env?.REACT_APP_API_URL) || "https://devrank-backend-production.up.railway.app";
 
 const STORAGE = {
-  token: "MaqsadCode_token",
-  user: "MaqsadCode_user",
+  token: "AslKod_token",
+  user: "AslKod_user",
 };
 
 const api = axios.create({
@@ -75,7 +75,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem(STORAGE.token) || localStorage.getItem("AslKod_token") || localStorage.getItem("devrank_token");
+  const token = localStorage.getItem(STORAGE.token) || localStorage.getItem("MaqsadCode_token") || localStorage.getItem("devrank_token");
   if (token) {
     config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${token}`;
@@ -261,6 +261,7 @@ function Field({ label, icon: Icon, error, ...props }) {
 }
 
 function Avatar({ user, size = "md" }) {
+  const isFounder = user?.email === "aminovhusamiddin@gmail.com";
   const sizes = {
     sm: "h-9 w-9 text-xs",
     md: "h-11 w-11 text-sm",
@@ -271,8 +272,11 @@ function Avatar({ user, size = "md" }) {
   return (
     <div
       className={cn(
-        "relative shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-violet-600 via-indigo-600 to-cyan-500 font-bold text-white shadow-inner flex items-center justify-center",
-        sizes[size]
+        "relative shrink-0 overflow-hidden rounded-xl font-bold text-white shadow-inner flex items-center justify-center transition-all",
+        sizes[size],
+        isFounder
+          ? "bg-gradient-to-br from-amber-500 via-yellow-400 to-amber-600 ring-4 ring-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.85)] border-2 border-yellow-300"
+          : "bg-gradient-to-br from-violet-600 via-indigo-600 to-cyan-500"
       )}
     >
       {user?.avatar ? (
@@ -283,6 +287,9 @@ function Avatar({ user, size = "md" }) {
       {user?.online ? (
         <span className="absolute bottom-0.5 right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#07080e] bg-emerald-400 ring-1 ring-emerald-400/50" />
       ) : null}
+      {isFounder && (
+        <span className="absolute -top-1 -right-1 text-[11px] leading-none select-none drop-shadow">👑</span>
+      )}
     </div>
   );
 }
@@ -410,9 +417,9 @@ function AuthView({ onAuthenticated, toast }) {
         <div className="hidden lg:flex flex-col justify-between p-10 border-r border-white/10 bg-gradient-to-br from-violet-950/20 via-black to-[#07080e]">
           <div>
             <div className="flex items-center gap-3">
-              <img src="/maqsad.png" alt="MaqsadCode Logo" className="w-10 h-10 object-contain rounded-xl" />
+              <img src="/maqsad.png" alt="AslKod Logo" className="w-10 h-10 object-contain rounded-xl" />
               <div>
-                <span className="font-black text-xl tracking-tight">MaqsadCode</span>
+                <span className="font-black text-xl tracking-tight">AslKod</span>
               </div>
             </div>
 
@@ -422,7 +429,7 @@ function AuthView({ onAuthenticated, toast }) {
                 O‘zbekiston dasturchilarining <span className="bg-gradient-to-r from-violet-400 to-cyan-300 bg-clip-text text-transparent">haqiqiy reyting platformasi</span>
               </h1>
               <p className="mt-4 text-sm text-slate-400 leading-6">
-                MaqsadCode - bu O‘zbekiston dasturchilarining haqiqiy ko‘rsatkichlarini aniqlash va reytinglash uchun yaratilgan platforma. Har bir foydalanuvchi o‘zining real kodlash qobiliyatini sinab ko‘rishi va boshqa dasturchilar bilan solishtirishi mumkin.
+                AslKod - bu O‘zbekiston dasturchilarining haqiqiy ko‘rsatkichlarini aniqlash va reytinglash uchun yaratilgan platforma. Har bir foydalanuvchi o‘zining real kodlash qobiliyatini sinab ko‘rishi va boshqa dasturchilar bilan solishtirishi mumkin.
               </p>
             </div>
           </div>
@@ -445,7 +452,7 @@ function AuthView({ onAuthenticated, toast }) {
             <div className="mb-6">
               <h2 className="text-2xl font-black text-white">{mode === "login" ? "Tizimga kirish" : "Ro‘yxatdan o‘tish"}</h2>
               <p className="text-xs text-slate-400 mt-1">
-                {mode === "login" ? "MaqsadCode hisobingiz orqali platformaga kiring." : "Yangi dasturchi profili yarating va reytingda qatnashing."}
+                {mode === "login" ? "AslKod hisobingiz orqali platformaga kiring." : "Yangi dasturchi profili yarating va reytingda qatnashing."}
               </p>
             </div>
 
@@ -567,10 +574,10 @@ function Sidebar({ view, setView, onLogout, user, mobileOpen, setMobileOpen }) {
     <>
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-[260px] border-r border-white/[0.08] bg-[#090a11]/95 px-5 py-6 lg:flex lg:flex-col backdrop-blur-2xl">
         <div className="flex items-center gap-3">
-          <img src="/maqsad.png" alt="MaqsadCode Logo" className="w-9 h-9 object-contain rounded-xl shadow-lg shadow-violet-500/10" />
+          <img src="/maqsad.png" alt="AslKod Logo" className="w-9 h-9 object-contain rounded-xl shadow-lg shadow-violet-500/10" />
           <div>
             <div className="font-black tracking-tight text-base text-white">
-              MaqsadCode
+              AslKod
             </div>
             <div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Platforma</div>
           </div>
@@ -604,7 +611,14 @@ function Sidebar({ view, setView, onLogout, user, mobileOpen, setMobileOpen }) {
           <div className="flex items-center gap-3 mb-3 p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
             <Avatar user={user} size="sm" />
             <div className="min-w-0 flex-1">
-              <div className="truncate text-xs font-bold text-white">{user.name}</div>
+              <div className="flex items-center gap-1 flex-wrap">
+                <span className="truncate text-xs font-bold text-white">{user.name}</span>
+                {user?.email === "aminovhusamiddin@gmail.com" && (
+                  <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-slate-950 inline-flex items-center gap-0.5">
+                    👑 Asoschisi
+                  </span>
+                )}
+              </div>
               <div className="text-[10px] text-slate-400 font-medium">Level {user.level} • {formatScore(user.score)} pts</div>
             </div>
           </div>
@@ -627,8 +641,8 @@ function Sidebar({ view, setView, onLogout, user, mobileOpen, setMobileOpen }) {
             <div>
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
-                  <img src="/maqsad.png" alt="MaqsadCode Logo" className="w-8 h-8 object-contain rounded-xl shadow-lg shadow-violet-500/10" />
-                  <div className="font-black text-lg">MaqsadCode</div>
+                  <img src="/maqsad.png" alt="AslKod Logo" className="w-8 h-8 object-contain rounded-xl shadow-lg shadow-violet-500/10" />
+                  <div className="font-black text-lg">AslKod</div>
                 </div>
                 <button type="button" onClick={() => setMobileOpen(false)} className="text-slate-400">
                   <X size={20} />
@@ -705,7 +719,14 @@ function Topbar({ user, onMenu, onProfile, onOpenSearch }) {
           >
             <Avatar user={user} size="sm" />
             <div className="hidden sm:block text-left">
-              <div className="text-xs font-bold text-white max-w-32 truncate">{user.name}</div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-white max-w-32 truncate">{user.name}</span>
+                {user?.email === "aminovhusamiddin@gmail.com" && (
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-slate-950 shadow-sm inline-flex items-center gap-0.5">
+                    👑 AslKod Asoschisi
+                  </span>
+                )}
+              </div>
               <div className="text-[10px] text-violet-400 font-medium">#{user.rank || "—"} Reyting</div>
             </div>
             <ChevronDown size={14} className="text-slate-500" />
@@ -820,7 +841,7 @@ function DashboardView({ user, leaderboard, setView, toast, refreshUser }) {
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Start: 0 pts</span>
               </div>
               <p className="text-xs text-slate-300 mt-1.5 leading-5 max-w-3xl">
-                <strong>MaqsadCode nima qiladi?</strong> Bu yerda siz turli yo'nalishlar (Web, AI, Cyber, UI/UX) bo'yicha amaliy topshiriqlarni yechasiz, jonli jamoaviy musobaqalarda qatnashasiz va O'zbekistonning eng kuchli dasturchilari reytingida 1-o'ringa ko'tarilasiz!
+                <strong>AslKod nima qiladi?</strong> Bu yerda siz turli yo'nalishlar (Web, AI, Cyber, UI/UX) bo'yicha amaliy topshiriqlarni yechasiz, jonli jamoaviy musobaqalarda qatnashasiz va O'zbekistonning eng kuchli dasturchilari reytingida 1-o'ringa ko'tarilasiz!
               </p>
             </div>
           </div>
@@ -1095,8 +1116,15 @@ function LeaderboardView({ toast, onOpenProfile }) {
           <Glass onClick={() => onOpenProfile(items[1].id)} className="p-5 text-center border-slate-500/20 order-2 md:order-1">
             <div className="inline-block rounded-full bg-slate-500/20 px-2.5 py-0.5 text-xs font-bold text-slate-300 mb-2">#2 O‘rin</div>
             <Avatar user={items[1]} size="lg" />
-            <h4 className="mt-3 font-black text-white text-base truncate">{items[1].name}</h4>
-            <div className="text-xs text-slate-400">{items[0].province}</div>
+            <div className="flex items-center justify-center gap-1.5 mt-3 flex-wrap">
+              <h4 className="font-black text-white text-base truncate">{items[1].name}</h4>
+              {items[1].email === "aminovhusamiddin@gmail.com" && (
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-slate-950 shadow-sm">
+                  👑 Asoschisi
+                </span>
+              )}
+            </div>
+            <div className="text-xs text-slate-400">{items[1].province}</div>
             <div className="mt-3 text-lg font-black text-cyan-300">{formatScore(items[1].score)} pts</div>
           </Glass>
 
@@ -1104,7 +1132,14 @@ function LeaderboardView({ toast, onOpenProfile }) {
           <Glass onClick={() => onOpenProfile(items[0].id)} className="p-6 text-center border-amber-500/30 bg-gradient-to-b from-amber-500/5 to-transparent order-1 md:order-2 scale-105">
             <div className="inline-block rounded-full bg-amber-500/20 px-3 py-1 text-xs font-black text-amber-300 mb-2">👑 #1 Chempion</div>
             <Avatar user={items[0]} size="xl" />
-            <h4 className="mt-3 font-black text-white text-lg truncate">{items[0].name}</h4>
+            <div className="flex items-center justify-center gap-1.5 mt-3 flex-wrap">
+              <h4 className="font-black text-white text-lg truncate">{items[0].name}</h4>
+              {items[0].email === "aminovhusamiddin@gmail.com" && (
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-slate-950 shadow-sm">
+                  👑 Asoschisi
+                </span>
+              )}
+            </div>
             <div className="text-xs text-slate-400">{items[0].province}</div>
             <div className="mt-3 text-2xl font-black text-amber-300">{formatScore(items[0].score)} pts</div>
           </Glass>
@@ -1113,8 +1148,15 @@ function LeaderboardView({ toast, onOpenProfile }) {
           <Glass onClick={() => onOpenProfile(items[2].id)} className="p-5 text-center border-amber-800/20 order-3">
             <div className="inline-block rounded-full bg-amber-800/20 px-2.5 py-0.5 text-xs font-bold text-amber-500 mb-2">#3 O‘rin</div>
             <Avatar user={items[2]} size="lg" />
-            <h4 className="mt-3 font-black text-white text-base truncate">{items[2].name}</h4>
-            <div className="text-xs text-slate-400">{items[0].province}</div>
+            <div className="flex items-center justify-center gap-1.5 mt-3 flex-wrap">
+              <h4 className="font-black text-white text-base truncate">{items[2].name}</h4>
+              {items[2].email === "aminovhusamiddin@gmail.com" && (
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-slate-950 shadow-sm">
+                  👑 Asoschisi
+                </span>
+              )}
+            </div>
+            <div className="text-xs text-slate-400">{items[2].province}</div>
             <div className="mt-3 text-lg font-black text-violet-300">{formatScore(items[2].score)} pts</div>
           </Glass>
         </div>
@@ -1141,7 +1183,14 @@ function LeaderboardView({ toast, onOpenProfile }) {
                 <div className="w-8 text-center text-xs font-bold text-slate-400">#{item.rank}</div>
                 <Avatar user={item} size="sm" />
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs sm:text-sm font-bold text-white truncate">{item.name}</div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-xs sm:text-sm font-bold text-white truncate">{item.name}</span>
+                    {item.email === "aminovhusamiddin@gmail.com" && (
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-slate-950 shadow-sm inline-flex items-center gap-0.5">
+                        👑 AslKod Asoschisi
+                      </span>
+                    )}
+                  </div>
                   <div className="text-[10px] text-slate-500">{item.province}</div>
                 </div>
 
@@ -1173,7 +1222,7 @@ function ProctoringWatermark({ user }) {
     const t = setInterval(() => setTime(new Date().toLocaleTimeString("uz-UZ")), 1000);
     return () => clearInterval(t);
   }, []);
-  const watermarkText = `MaqsadCode SECURE PROCTOR • ${user?.name || "Nomzod"} • ${user?.email || "candidate@maqsadcode.uz"} • ${time}`;
+  const watermarkText = `AslKod SECURE PROCTOR • ${user?.name || "Nomzod"} • ${user?.email || "candidate@aslkod.uz"} • ${time}`;
 
   return (
     <div className="fixed inset-0 pointer-events-none z-30 overflow-hidden select-none opacity-[0.06] flex flex-col justify-around rotate-[-12deg] scale-125">
@@ -1254,7 +1303,7 @@ function CameraVerificationModal({ isOpen, onClose, onVerified, title = "Kamera 
         </div>
 
         <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 text-xs text-slate-300 leading-relaxed">
-          MaqsadCode platformasida topshiriq va musobaqalarni yechishda <strong>veb-kamera orqali AI nazorati majburiydir</strong>. Kamerasiz testga kirish qat'iyan taqiqlanadi.
+          AslKod platformasida topshiriq va musobaqalarni yechishda <strong>veb-kamera orqali AI nazorati majburiydir</strong>. Kamerasiz testga kirish qat'iyan taqiqlanadi.
         </div>
 
         {/* Video preview box */}
@@ -1467,7 +1516,7 @@ function getStarterTemplate(lang, challenge) {
   return challenge?.starterCode || `function solve(...args) {\n  // Yechimingizni shu yerga yozing\n  \n}`;
 }
 
-function CodeLabView({ toast, refreshUser, user }) {
+function CodeLabView({ toast, refreshUser, user, onChallengeModeChange }) {
   const [category, setCategory] = useState("web");
   const [difficultyFilter, setDifficultyFilter] = useState("all");
   const [challenges, setChallenges] = useState([]);
@@ -1485,6 +1534,17 @@ function CodeLabView({ toast, refreshUser, user }) {
   const [cameraStream, setCameraStream] = useState(null);
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [pendingChallenge, setPendingChallenge] = useState(null);
+
+  useEffect(() => {
+    if (onChallengeModeChange) {
+      onChallengeModeChange(Boolean(selected));
+    }
+    return () => {
+      if (onChallengeModeChange) {
+        onChallengeModeChange(false);
+      }
+    };
+  }, [selected, onChallengeModeChange]);
 
   useEffect(() => {
     if (!selected) {
@@ -1568,7 +1628,7 @@ function CodeLabView({ toast, refreshUser, user }) {
         e.preventDefault();
         try {
           if (navigator.clipboard?.writeText) {
-            navigator.clipboard.writeText("Maxfiy kontent — MaqsadCode xavfsizligi!").catch(() => {});
+            navigator.clipboard.writeText("Maxfiy kontent — AslKod xavfsizligi!").catch(() => {});
           }
         } catch (err) {}
         toast("error", "Skrinshot taqiqlangan!", "Ekranni rasmga olish yoki skrinshot qilish qat'iyan taqiqlanadi!");
@@ -1640,6 +1700,16 @@ function CodeLabView({ toast, refreshUser, user }) {
   }, [loadChallenges]);
 
   function requestChallengeEntry(item) {
+    if (item.locked || item.isSuspicious || item.failed || item.completed) {
+      if (item.isSuspicious) {
+        toast("error", "Taqiqlangan!", "Ushbu topshiriqda shubhali harakat aniqlangan va u butunlay qulflangan!");
+      } else if (item.failed) {
+        toast("error", "Urinishlar tugagan!", "Ushbu topshiriq xato deb belgilangan va qayta ochish mumkin emas!");
+      } else if (item.completed) {
+        toast("info", "Bajarilgan", "Ushbu topshiriq muvaffaqiyatli bajarilgan.");
+      }
+      return;
+    }
     if (cameraStream && cameraStream.active && cameraStream.getVideoTracks().some((t) => t.readyState === "live")) {
       openChallenge(item);
     } else {
@@ -1745,11 +1815,20 @@ function CodeLabView({ toast, refreshUser, user }) {
       await refreshUser();
       await loadChallenges();
 
-      toast(
-        response.data?.passed ? "success" : "error",
-        response.data?.passed ? "Topshiriq bajarildi!" : "Natija qoniqarsiz",
-        `Umumiy ball: ${response.data?.score ?? 0}/100.`
-      );
+      if (response.data?.passed) {
+        toast("success", "Topshiriq muvaffaqiyatli bajarildi! 🎉", `Umumiy ball: ${response.data?.score ?? 0}/100.`);
+      } else {
+        if (selected.type === "QUIZ") {
+          toast("error", "Noto'g'ri javob!", "Quiz savolda faqat 1 ta urinish mavjud! Savol 'Xato' deb belgilandi va butunlay qulflandi.");
+        } else {
+          const attempts = response.data?.attempts || 1;
+          if (attempts === 1) {
+            toast("error", "Kodingiz xato! (1 ta oxirgi urinish qoldi)", "Diqqat: kodingizni yana 1 marta xato topshirsangiz, ushbu topshiriq butunlay qulflanadi!");
+          } else {
+            toast("error", "Urinishlar tugadi!", "Topshiriq 2 marta xato topshirildi va butunlay qulflanadi.");
+          }
+        }
+      }
     } catch (err) {
       toast("error", "Submit xatosi", apiMessage(err));
     } finally {
@@ -1759,30 +1838,34 @@ function CodeLabView({ toast, refreshUser, user }) {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      <Header
-        eyebrow="AI Code Lab"
-        title="Dasturlash & AI Topshiriqlari"
-        subtitle="Real subprocess test runner va AI bilan tekshiriladigan topshiriqlar."
-      />
+      {!selected && (
+        <>
+          <Header
+            eyebrow="AI Code Lab"
+            title="Dasturlash & AI Topshiriqlari"
+            subtitle="Real subprocess test runner va AI bilan tekshiriladigan topshiriqlar."
+          />
 
-      {/* 4 Category Selector Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {CATEGORIES.map((c) => {
-          const Icon = c.icon;
-          const active = category === c.id;
-          return (
-            <Glass
-              key={c.id}
-              onClick={() => setCategory(c.id)}
-              className={cn("p-4 transition", active ? "border-violet-500 bg-violet-600/10" : "hover:border-white/20")}
-            >
-              <Icon size={20} className={active ? "text-violet-400" : "text-slate-400"} />
-              <div className="mt-2 text-xs sm:text-sm font-bold text-white">{c.title}</div>
-              <div className="mt-0.5 text-[10px] text-slate-400 truncate">{c.desc}</div>
-            </Glass>
-          );
-        })}
-      </div>
+          {/* 4 Category Selector Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {CATEGORIES.map((c) => {
+              const Icon = c.icon;
+              const active = category === c.id;
+              return (
+                <Glass
+                  key={c.id}
+                  onClick={() => setCategory(c.id)}
+                  className={cn("p-4 transition", active ? "border-violet-500 bg-violet-600/10" : "hover:border-white/20")}
+                >
+                  <Icon size={20} className={active ? "text-violet-400" : "text-slate-400"} />
+                  <div className="mt-2 text-xs sm:text-sm font-bold text-white">{c.title}</div>
+                  <div className="mt-0.5 text-[10px] text-slate-400 truncate">{c.desc}</div>
+                </Glass>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {!selected ? (
         <Glass className="p-6">
@@ -1825,88 +1908,92 @@ function CodeLabView({ toast, refreshUser, user }) {
             <div className="grid md:grid-cols-2 gap-4">
               {challenges
                 .filter((c) => difficultyFilter === "all" || c.difficulty?.toLowerCase() === difficultyFilter.toLowerCase())
-                .map((item) => (
-                <Glass
-                  key={item.id}
-                  onClick={() => !item.locked && requestChallengeEntry(item)}
-                  className={cn(
-                    "p-5 transition cursor-pointer relative",
-                    item.isSuspicious
-                      ? "border-red-500/60 bg-red-950/25 shadow-lg shadow-red-950/40 hover:border-red-400"
-                      : item.completed
-                        ? "border-emerald-500/30 bg-emerald-500/[0.06] hover:border-emerald-500/50"
-                        : item.failed
-                          ? "border-rose-500/50 bg-rose-950/25 shadow-lg shadow-rose-950/40 hover:border-rose-400"
-                          : item.locked
-                            ? "opacity-50 cursor-not-allowed border-white/5"
-                            : "hover:border-violet-500/40"
-                  )}
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-2">
-                      <span className={cn(
-                        "text-[10px] font-black uppercase px-2 py-0.5 rounded-full border",
-                        item.type === "QUIZ" ? "bg-amber-500/10 text-amber-300 border-amber-500/20" : "bg-cyan-500/10 text-cyan-300 border-cyan-500/20"
-                      )}>
-                        {item.type}
-                      </span>
-                      <span className={cn(
-                        "text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border flex items-center gap-1",
-                        item.difficulty?.toLowerCase() === "easy" ? "bg-green-500/10 text-green-300 border-green-500/20"
-                          : item.difficulty?.toLowerCase() === "medium" ? "bg-yellow-500/10 text-yellow-300 border-yellow-500/20"
-                          : item.difficulty?.toLowerCase() === "hard" ? "bg-orange-500/10 text-orange-300 border-orange-500/20"
-                          : item.difficulty?.toLowerCase() === "extreme" ? "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/40 font-black animate-pulse shadow-sm shadow-fuchsia-500/20"
-                          : "bg-red-500/10 text-red-300 border-red-500/20"
-                      )}>
-                        {item.difficulty?.toLowerCase() === "extreme" && <Flame size={10} className="text-fuchsia-400" />}
-                        {item.difficulty}
-                      </span>
-                      {item.isSuspicious && (
-                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full border bg-red-500/20 text-red-300 border-red-500/40 flex items-center gap-1">
-                          <ShieldAlert size={10} /> Shubhali
-                        </span>
+                .map((item) => {
+                  const isBlocked = item.locked || item.isSuspicious || item.failed || item.completed;
+                  return (
+                    <Glass
+                      key={item.id}
+                      onClick={() => !isBlocked && requestChallengeEntry(item)}
+                      className={cn(
+                        "p-5 transition relative",
+                        isBlocked ? "cursor-not-allowed opacity-85" : "cursor-pointer hover:border-violet-500/40",
+                        item.isSuspicious
+                          ? "border-red-500/60 bg-red-950/30 shadow-lg shadow-red-950/40"
+                          : item.completed
+                            ? "border-emerald-500/30 bg-emerald-500/[0.06]"
+                            : item.failed
+                              ? "border-rose-500/50 bg-rose-950/30 shadow-lg shadow-rose-950/40"
+                              : item.locked
+                                ? "opacity-50 border-white/5"
+                                : ""
                       )}
-                      {item.failed && !item.isSuspicious && (
-                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full border bg-rose-500/20 text-rose-300 border-rose-500/40 flex items-center gap-1">
-                          <X size={10} /> {item.isTimeout ? "Vaqt tugagan" : "Xato"}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-xs font-bold text-amber-400">{item.points} pts</span>
-                  </div>
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-2">
+                          <span className={cn(
+                            "text-[10px] font-black uppercase px-2 py-0.5 rounded-full border",
+                            item.type === "QUIZ" ? "bg-amber-500/10 text-amber-300 border-amber-500/20" : "bg-cyan-500/10 text-cyan-300 border-cyan-500/20"
+                          )}>
+                            {item.type}
+                          </span>
+                          <span className={cn(
+                            "text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border flex items-center gap-1",
+                            item.difficulty?.toLowerCase() === "easy" ? "bg-green-500/10 text-green-300 border-green-500/20"
+                              : item.difficulty?.toLowerCase() === "medium" ? "bg-yellow-500/10 text-yellow-300 border-yellow-500/20"
+                              : item.difficulty?.toLowerCase() === "hard" ? "bg-orange-500/10 text-orange-300 border-orange-500/20"
+                              : item.difficulty?.toLowerCase() === "extreme" ? "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/40 font-black animate-pulse shadow-sm shadow-fuchsia-500/20"
+                              : "bg-red-500/10 text-red-300 border-red-500/20"
+                          )}>
+                            {item.difficulty?.toLowerCase() === "extreme" && <Flame size={10} className="text-fuchsia-400" />}
+                            {item.difficulty}
+                          </span>
+                          {item.isSuspicious && (
+                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full border bg-red-500/20 text-red-300 border-red-500/40 flex items-center gap-1">
+                              <ShieldAlert size={10} /> Shubhali
+                            </span>
+                          )}
+                          {item.failed && !item.isSuspicious && (
+                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full border bg-rose-500/20 text-rose-300 border-rose-500/40 flex items-center gap-1">
+                              <X size={10} /> {item.isTimeout ? "Vaqt tugagan" : "Xato"}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs font-bold text-amber-400">{item.points} pts</span>
+                      </div>
 
-                  <h4 className="mt-3 font-bold text-white text-base">{item.title}</h4>
-                  <p className="mt-1 text-xs text-slate-400 leading-5 line-clamp-2">{item.description}</p>
+                      <h4 className="mt-3 font-bold text-white text-base">{item.title}</h4>
+                      <p className="mt-1 text-xs text-slate-400 leading-5 line-clamp-2">{item.description}</p>
 
-                  <div className="mt-4 flex items-center justify-between pt-3 border-t border-white/[0.06] text-[10px] text-slate-500 font-medium">
-                    <span className="capitalize">{item.difficulty} • {item.language}</span>
-                    {item.isSuspicious ? (
-                      <span className="text-red-400 font-bold flex items-center gap-1 bg-red-500/15 px-2.5 py-1 rounded-lg border border-red-500/30 text-xs shadow-sm">
-                        <ShieldAlert size={13} className="text-red-400" /> Shubha bor
-                      </span>
-                    ) : item.completed ? (
-                      <span className="text-emerald-400 font-bold flex items-center gap-1">
-                        <Check size={12} /> Bajarilgan
-                      </span>
-                    ) : item.failed ? (
-                      <span className="text-rose-400 font-bold flex items-center gap-1 bg-rose-500/15 px-2.5 py-1 rounded-lg border border-rose-500/30 text-xs shadow-sm">
-                        <X size={13} className="text-rose-400" /> {item.isTimeout ? "Xato (Vaqt tugadi)" : "Xato yechilgan"}
-                      </span>
-                    ) : item.locked ? (
-                      <span className="text-slate-600 font-bold flex items-center gap-1">
-                        🔒 Qulflangan
-                      </span>
-                    ) : (
-                      <span className="text-violet-400 font-bold">Ochish →</span>
-                    )}
-                  </div>
-                </Glass>
-              ))}
+                      <div className="mt-4 flex items-center justify-between pt-3 border-t border-white/[0.06] text-[10px] text-slate-500 font-medium">
+                        <span className="capitalize">{item.difficulty} • {item.language}</span>
+                        {item.isSuspicious ? (
+                          <span className="text-red-400 font-bold flex items-center gap-1 bg-red-500/15 px-2.5 py-1 rounded-lg border border-red-500/30 text-xs shadow-sm cursor-not-allowed">
+                            <ShieldAlert size={13} className="text-red-400" /> Shubha bor
+                          </span>
+                        ) : item.completed ? (
+                          <span className="text-emerald-400 font-bold flex items-center gap-1 bg-emerald-500/15 px-2.5 py-1 rounded-lg border border-emerald-500/30 text-xs cursor-not-allowed">
+                            <Check size={12} /> Bajarilgan
+                          </span>
+                        ) : item.failed ? (
+                          <span className="text-rose-400 font-bold flex items-center gap-1 bg-rose-500/15 px-2.5 py-1 rounded-lg border border-rose-500/30 text-xs shadow-sm cursor-not-allowed">
+                            <X size={13} className="text-rose-400" /> {item.isTimeout ? "Xato (Vaqt tugadi)" : "Xato (Urinishlar tugadi)"}
+                          </span>
+                        ) : item.locked ? (
+                          <span className="text-slate-600 font-bold flex items-center gap-1 cursor-not-allowed">
+                            🔒 Qulflangan
+                          </span>
+                        ) : (
+                          <span className="text-violet-400 font-bold hover:underline">Ochish →</span>
+                        )}
+                      </div>
+                    </Glass>
+                  );
+                })}
             </div>
           )}
         </Glass>
       ) : (
-        /* 3-Column Challenge Workspace with Proctoring */
+        /* 3-Column Challenge Workspace with Distraction-Free Proctoring */
         <div
           className="relative grid xl:grid-cols-[0.8fr_1.3fr_0.9fr] gap-4 items-start select-none"
           onContextMenu={(e) => e.preventDefault()}
@@ -1922,14 +2009,16 @@ function CodeLabView({ toast, refreshUser, user }) {
           />
           {/* Left: Problem Description */}
           <Glass className="p-5 space-y-4">
-            <button
-              type="button"
-              onClick={closeChallengeSafely}
-              className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white"
-            >
-              <ArrowLeft size={14} />
-              <span>Barcha topshiriqlar</span>
-            </button>
+            {(result || labDisqualified || challengeTimeLeft === 0 || selected.completed) && (
+              <button
+                type="button"
+                onClick={closeChallengeSafely}
+                className="w-full py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-white font-bold text-xs transition flex items-center justify-center gap-2 border border-white/10"
+              >
+                <ArrowLeft size={14} />
+                <span>Topshiriqlar ro'yxatiga qaytish</span>
+              </button>
+            )}
 
             {labDisqualified && (
               <div className="p-4 rounded-xl bg-red-500/15 border border-red-500/30 text-red-300 text-xs space-y-2">
@@ -2172,7 +2261,7 @@ function CodeLabView({ toast, refreshUser, user }) {
                   </>
                 ) : (
                   <div className="text-slate-600">
-                    › $ MaqsadCode runner ready...<br />
+                    › $ AslKod runner ready...<br />
                     › Kodni yozib "Run Tests" tugmasini bosing.
                   </div>
                 )}
@@ -2285,6 +2374,11 @@ function ProfileView({ user, own, toast, refreshUser }) {
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-3">
               <h2 className="text-2xl sm:text-3xl font-black text-white">{user.name}</h2>
+              {user.email === "aminovhusamiddin@gmail.com" && (
+                <span className="px-3 py-1 rounded-lg text-xs font-black bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-slate-950 shadow-md inline-flex items-center gap-1.5 border border-yellow-200 animate-pulse">
+                  👑 AslKod Asoschisi • Oltin Nishon
+                </span>
+              )}
               <span className="rounded-full bg-violet-500/20 border border-violet-500/30 px-3 py-0.5 text-xs font-bold text-violet-300">
                 Level {user.level}
               </span>
@@ -3280,7 +3374,7 @@ function CompetitionArena({ compId, onBack, toast, user, cameraStream }) {
     const handleKeySecurity = (e) => {
       if (e.key === "PrintScreen") {
         if (navigator.clipboard?.writeText) {
-          navigator.clipboard.writeText("MaqsadCode Xavfsizlik: Skrinshot olish taqiqlangan!").catch(() => {});
+          navigator.clipboard.writeText("AslKod Xavfsizlik: Skrinshot olish taqiqlangan!").catch(() => {});
         }
         toast("error", "Skrinshot bloklandi", "Platforma ichida skrinshot olish qat'iyan man etiladi!");
       }
@@ -3419,7 +3513,7 @@ function CompetitionArena({ compId, onBack, toast, user, cameraStream }) {
             <strong>Sabab:</strong> {disqualifiedReason || "Boshqa oynaga o'tish yoki to'liq ekrandan chiqish qoidabuzarligi aniqlandi."}
           </div>
           <p className="text-xs text-slate-400 leading-5">
-            MaqsadCode musobaqalarida halollik qat'iy nazorat qilinadi. Boshqa ilovaga yoki tabga o'tish qat'iyan taqiqlangan.
+            AslKod musobaqalarida halollik qat'iy nazorat qilinadi. Boshqa ilovaga yoki tabga o'tish qat'iyan taqiqlangan.
             <br /><br />
             <span className="text-amber-400 font-semibold">Qayta kirish imkoniyati faqat admin tomonidan ruxsat berilgandan so'ng ochiladi.</span>
           </p>
@@ -3997,7 +4091,7 @@ function CompetitionRulesModal({ onClose }) {
             <div className="space-y-1">
               <div className="text-xs font-bold text-emerald-300">5. G'OLIBLAR VA RASMIY DIPLOM</div>
               <p className="text-[12px] text-slate-300 leading-relaxed">
-                Musobaqa yakunida g'olib bo'lgan jamoa a'zolariga <strong>Rasmiy MaqsadCode G'oliblik Diplomi</strong> ochiladi hamda tashkilotchilar bilan to'g'ridan-to'g'ri bog'lanish shakli taqdim etiladi!
+                Musobaqa yakunida g'olib bo'lgan jamoa a'zolariga <strong>Rasmiy AslKod G'oliblik Diplomi</strong> ochiladi hamda tashkilotchilar bilan to'g'ridan-to'g'ri bog'lanish shakli taqdim etiladi!
               </p>
             </div>
           </div>
@@ -4067,7 +4161,7 @@ function CompetitionsView({ toast, user }) {
       });
       if (activeComp) {
         triggerDesktopNotification(
-          "MaqsadCode Musobaqa Boshlandi! 🏆",
+          "AslKod Musobaqa Boshlandi! 🏆",
           `"${activeComp.title}" musobaqasi boshlandi! Jamoangiz bilan bellashuvga kiring va 500 ball yuting!`
         );
       }
@@ -4298,7 +4392,7 @@ function CompetitionsView({ toast, user }) {
           isOpen={showCameraModal}
           onClose={handleCameraCancel}
           onVerified={handleCameraVerified}
-          title="MaqsadCode Musobaqa — Majburiy Kamera Nazorati"
+          title="AslKod Musobaqa — Majburiy Kamera Nazorati"
         />
       </div>
     );
@@ -4987,6 +5081,8 @@ function App() {
   const [profileOverride, setProfileOverride] = useState(null);
   const [loadingUser, setLoadingUser] = useState(Boolean(user));
 
+  const [inChallengeMode, setInChallengeMode] = useState(false);
+
   const toast = useCallback((type, title, message) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     setToasts((prev) => [...prev, { id, type, title, message }]);
@@ -5047,6 +5143,7 @@ function App() {
     setUser(null);
     setProfileOverride(null);
     setLeaderboard([]);
+    setInChallengeMode(false);
   }
 
   function onAuthenticated(nextUser) {
@@ -5069,7 +5166,7 @@ function App() {
       return <LeaderboardView toast={toast} onOpenProfile={openProfile} />;
     }
     if (view === "code") {
-      return <CodeLabView toast={toast} refreshUser={refreshUser} user={user} />;
+      return <CodeLabView toast={toast} refreshUser={refreshUser} user={user} onChallengeModeChange={setInChallengeMode} />;
     }
     if (view === "profile") {
       const target = profileOverride || user;
@@ -5103,37 +5200,44 @@ function App() {
     );
   }
 
+  const isDistractionFree = inChallengeMode && view === "code";
+
   return (
     <div className="min-h-screen bg-[#07080e] text-white selection:bg-violet-500/30">
-      <Sidebar
-        view={view}
-        setView={(v) => {
-          setProfileOverride(null);
-          setView(v);
-        }}
-        onLogout={logout}
-        user={user}
-        mobileOpen={mobileOpen}
-        setMobileOpen={setMobileOpen}
-      />
-
-      <div className="lg:pl-[260px]">
-        <Topbar
-          user={user}
-          onMenu={() => setMobileOpen(true)}
-          onProfile={() => {
+      {!isDistractionFree && (
+        <Sidebar
+          view={view}
+          setView={(v) => {
             setProfileOverride(null);
-            setView("profile");
+            setInChallengeMode(false);
+            setView(v);
           }}
-          onOpenSearch={() => setSearchOpen(true)}
+          onLogout={logout}
+          user={user}
+          mobileOpen={mobileOpen}
+          setMobileOpen={setMobileOpen}
         />
+      )}
 
-        <main className="max-w-[1480px] mx-auto px-4 sm:px-8 py-8">
+      <div className={isDistractionFree ? "w-full" : "lg:pl-[260px]"}>
+        {!isDistractionFree && (
+          <Topbar
+            user={user}
+            onMenu={() => setMobileOpen(true)}
+            onProfile={() => {
+              setProfileOverride(null);
+              setView("profile");
+            }}
+            onOpenSearch={() => setSearchOpen(true)}
+          />
+        )}
+
+        <main className={isDistractionFree ? "w-full p-2 sm:p-4 max-w-[1920px] mx-auto min-h-screen" : "max-w-[1480px] mx-auto px-4 sm:px-8 py-8"}>
           {renderPage()}
         </main>
       </div>
 
-      {searchOpen ? (
+      {!isDistractionFree && searchOpen ? (
         <SearchModal
           onClose={() => setSearchOpen(false)}
           onOpenProfile={openProfile}
