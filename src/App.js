@@ -1327,6 +1327,34 @@ function CodeLabView({ toast, refreshUser }) {
     }
   }
 
+  const handleTimeout = useCallback(async () => {
+    if (!selected || result || loading) return;
+    try {
+      await api.post(`/api/challenges/${selected.id}/timeout`, {
+        code: code || "// Vaqt tugadi"
+      });
+      setResult({
+        passed: false,
+        score: 0,
+        output: "> Vaqt tugadi! Belgilangan vaqt ichida javob berilmadi.",
+        feedback: "Belgilangan vaqt tugadi! Ushbu topshiriq xato deb belgilandi.",
+        model: "Timeout Guard",
+        isTimeout: true
+      });
+      toast("error", "Vaqt tugadi!", "Topshiriq uchun ajratilgan vaqt tugadi. Tizim xato deb qayd etdi.");
+      if (refreshUser) await refreshUser();
+      await loadChallenges();
+    } catch (err) {
+      console.error("Timeout handling error:", err);
+    }
+  }, [selected, result, loading, code, toast, refreshUser, loadChallenges]);
+
+  useEffect(() => {
+    if (challengeTimeLeft === 0 && selected && !result && !loading) {
+      handleTimeout();
+    }
+  }, [challengeTimeLeft, selected, result, loading, handleTimeout]);
+
   async function submitSolution() {
     if (!selected || loading) return;
 
@@ -1416,9 +1444,11 @@ function CodeLabView({ toast, refreshUser }) {
                       ? "border-red-500/60 bg-red-950/25 shadow-lg shadow-red-950/40 hover:border-red-400"
                       : item.completed
                         ? "border-emerald-500/30 bg-emerald-500/[0.06] hover:border-emerald-500/50"
-                        : item.locked
-                          ? "opacity-50 cursor-not-allowed border-white/5"
-                          : "hover:border-violet-500/40"
+                        : item.failed
+                          ? "border-rose-500/50 bg-rose-950/25 shadow-lg shadow-rose-950/40 hover:border-rose-400"
+                          : item.locked
+                            ? "opacity-50 cursor-not-allowed border-white/5"
+                            : "hover:border-violet-500/40"
                   )}
                 >
                   <div className="flex justify-between items-start">
@@ -1443,6 +1473,11 @@ function CodeLabView({ toast, refreshUser }) {
                           <ShieldAlert size={10} /> Shubhali
                         </span>
                       )}
+                      {item.failed && !item.isSuspicious && (
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full border bg-rose-500/20 text-rose-300 border-rose-500/40 flex items-center gap-1">
+                          <X size={10} /> {item.isTimeout ? "Vaqt tugagan" : "Xato"}
+                        </span>
+                      )}
                     </div>
                     <span className="text-xs font-bold text-amber-400">{item.points} pts</span>
                   </div>
@@ -1459,6 +1494,10 @@ function CodeLabView({ toast, refreshUser }) {
                     ) : item.completed ? (
                       <span className="text-emerald-400 font-bold flex items-center gap-1">
                         <Check size={12} /> Bajarilgan
+                      </span>
+                    ) : item.failed ? (
+                      <span className="text-rose-400 font-bold flex items-center gap-1 bg-rose-500/15 px-2.5 py-1 rounded-lg border border-rose-500/30 text-xs shadow-sm">
+                        <X size={13} className="text-rose-400" /> {item.isTimeout ? "Xato (Vaqt tugadi)" : "Xato yechilgan"}
                       </span>
                     ) : item.locked ? (
                       <span className="text-slate-600 font-bold flex items-center gap-1">
@@ -1636,8 +1675,8 @@ function CodeLabView({ toast, refreshUser }) {
                       Keyingi savol →
                     </button>
                   ) : (
-                    <Button onClick={submitSolution} disabled={loading || quizAnswer === null || labDisqualified} icon={loading ? Loader2 : Check} className="ml-auto">
-                      {loading ? "Tekshirilmoqda..." : "Javobni yuborish"}
+                    <Button onClick={submitSolution} disabled={loading || quizAnswer === null || labDisqualified || challengeTimeLeft === 0} icon={loading ? Loader2 : Check} className="ml-auto">
+                      {loading ? "Tekshirilmoqda..." : challengeTimeLeft === 0 ? "Vaqt tugadi (Xato)" : "Javobni yuborish"}
                     </Button>
                   )}
                 </div>
@@ -1699,8 +1738,8 @@ function CodeLabView({ toast, refreshUser }) {
 
                 <div className="flex items-center justify-between p-3.5 border-t border-white/10 bg-[#090a11]">
                   <span className="text-[11px] text-slate-500">Test runner + AI Review</span>
-                  <Button onClick={submitSolution} disabled={loading || labDisqualified} icon={loading ? Loader2 : Play}>
-                    {loading ? "Testlar ishlamoqda..." : "Run Tests & AI Review"}
+                  <Button onClick={submitSolution} disabled={loading || labDisqualified || challengeTimeLeft === 0} icon={loading ? Loader2 : Play}>
+                    {loading ? "Testlar ishlamoqda..." : challengeTimeLeft === 0 ? "Vaqt tugadi (Xato)" : "Run Tests & AI Review"}
                   </Button>
                 </div>
               </>
