@@ -1117,8 +1117,8 @@ function DashboardView({ user, leaderboard, setView, toast, refreshUser }) {
           </div>
 
           {(() => {
-            const founder = leaderboard.find((u) => u.email === "aminovhusamiddin@gmail.com");
-            const ranked = leaderboard.filter((u) => u.email !== "aminovhusamiddin@gmail.com");
+            const founder = leaderboard.find((u) => u.isFounder || u.email === "aminovhusamiddin@gmail.com" || u.name === "Aminov Husamiddin");
+            const ranked = leaderboard.filter((u) => !u.isFounder && u.email !== "aminovhusamiddin@gmail.com" && u.name !== "Aminov Husamiddin");
 
             return (
               <>
@@ -1263,8 +1263,8 @@ function LeaderboardView({ toast, onOpenProfile }) {
     return () => clearInterval(timer);
   }, [load]);
 
-  const founder = items.find(u => u.email === "aminovhusamiddin@gmail.com");
-  const ranked = items.filter(u => u.email !== "aminovhusamiddin@gmail.com");
+  const founder = items.find(u => u.isFounder || u.email === "aminovhusamiddin@gmail.com" || u.name === "Aminov Husamiddin");
+  const ranked = items.filter(u => !u.isFounder && u.email !== "aminovhusamiddin@gmail.com" && u.name !== "Aminov Husamiddin");
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
