@@ -365,9 +365,70 @@ function Empty({ text, sub, icon: Icon = AlertCircle, action }) {
 // ----------------- AUTH VIEW -----------------
 function AuthView({ onAuthenticated, toast }) {
   const [mode, setMode] = useState("login");
-  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", countryCode: "+998" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleModalOpen, setGoogleModalOpen] = useState(false);
+  const [googleEmail, setGoogleEmail] = useState("");
+  const [googleName, setGoogleName] = useState("");
+
+  useEffect(() => {
+    // If Google GIS library is ready, initialize it
+    if (window.google?.accounts?.id) {
+      try {
+        window.google.accounts.id.initialize({
+          client_id: "721983719283-placeholder.apps.googleusercontent.com",
+          callback: async (res) => {
+            if (res.credential) {
+              setGoogleLoading(true);
+              try {
+                const response = await api.post("/api/google", { credential: res.credential });
+                const token = response.data.token;
+                const nextUser = normalizeUser(response.data.user);
+                localStorage.setItem(STORAGE.token, token);
+                localStorage.setItem(STORAGE.user, JSON.stringify(nextUser));
+                onAuthenticated(nextUser);
+                toast("success", "Google orqali kirdingiz! 🎉", `Xush kelibsiz, ${nextUser.name}!`);
+              } catch (err) {
+                setError(apiMessage(err));
+              } finally {
+                setGoogleLoading(false);
+              }
+            }
+          }
+        });
+      } catch {}
+    }
+  }, [onAuthenticated, toast]);
+
+  async function handleGoogleDirectAuth(targetEmail, targetName) {
+    if (!targetEmail || !targetEmail.includes("@")) {
+      setError("Haqiqiy Google email manzilini kiriting.");
+      return;
+    }
+    setGoogleLoading(true);
+    setError("");
+    try {
+      const response = await api.post("/api/google", {
+        email: targetEmail.trim().toLowerCase(),
+        name: targetName?.trim() || targetEmail.split("@")[0],
+      });
+      const token = response.data.token;
+      const nextUser = normalizeUser(response.data.user);
+
+      localStorage.setItem(STORAGE.token, token);
+      localStorage.setItem(STORAGE.user, JSON.stringify(nextUser));
+
+      onAuthenticated(nextUser);
+      toast("success", "Google hisobingiz tasdiqlandi! 🎉", `Xush kelibsiz, ${nextUser.name}!`);
+    } catch (err) {
+      setError(apiMessage(err));
+    } finally {
+      setGoogleLoading(false);
+      setGoogleModalOpen(false);
+    }
+  }
 
   async function submit(e) {
     e.preventDefault();
@@ -412,6 +473,86 @@ function AuthView({ onAuthenticated, toast }) {
 
   return (
     <div className="min-h-screen bg-[#07080e] flex items-center justify-center p-4 sm:p-6 text-white selection:bg-violet-500/30">
+      {/* Google Account Connect Modal */}
+      {googleModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#0f111a] p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                </svg>
+                <h3 className="text-base font-bold text-white">Google orqali davom etish</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setGoogleModalOpen(false)}
+                className="text-slate-400 hover:text-white text-xs font-bold px-2 py-1 rounded-lg hover:bg-white/5"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-5">
+              Google orqali autentifikatsiya qilish uchun Google email manzilingizni kiriting:
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Google Email Manzilingiz *</label>
+                <input
+                  type="email"
+                  placeholder="nomzod@gmail.com"
+                  value={googleEmail}
+                  onChange={(e) => setGoogleEmail(e.target.value)}
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">To'liq ismingiz (ixtiyoriy)</label>
+                <input
+                  type="text"
+                  placeholder="Ali Valiyev"
+                  value={googleName}
+                  onChange={(e) => setGoogleName(e.target.value)}
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500"
+                />
+              </div>
+            </div>
+
+            {error && (
+              <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 p-2.5 rounded-xl">
+                {error}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setGoogleModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white"
+              >
+                Bekor qilish
+              </button>
+              <button
+                type="button"
+                disabled={googleLoading || !googleEmail.includes("@")}
+                onClick={() => handleGoogleDirectAuth(googleEmail, googleName)}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs transition disabled:opacity-50 flex items-center gap-2"
+              >
+                {googleLoading ? <Loader2 size={14} className="animate-spin" /> : null}
+                <span>Google orqali ulanish</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="w-full max-w-5xl grid lg:grid-cols-2 rounded-3xl border border-white/10 bg-[#0d0f17]/90 backdrop-blur-2xl shadow-2xl overflow-hidden">
         {/* Left hero banner */}
         <div className="hidden lg:flex flex-col justify-between p-10 border-r border-white/10 bg-gradient-to-br from-violet-950/20 via-black to-[#07080e]">
@@ -454,6 +595,35 @@ function AuthView({ onAuthenticated, toast }) {
               <p className="text-xs text-slate-400 mt-1">
                 {mode === "login" ? "AslKod hisobingiz orqali platformaga kiring." : "Yangi dasturchi profili yarating va reytingda qatnashing."}
               </p>
+            </div>
+
+            {/* Google One-Click Button */}
+            <button
+              type="button"
+              disabled={googleLoading}
+              onClick={() => {
+                if (window.google?.accounts?.id) {
+                  try {
+                    window.google.accounts.id.prompt();
+                  } catch {}
+                }
+                setGoogleModalOpen(true);
+              }}
+              className="w-full py-3 px-4 rounded-2xl border border-white/15 bg-white/[0.05] hover:bg-white/[0.1] hover:border-white/30 text-white font-bold text-xs transition flex items-center justify-center gap-3 shadow-lg cursor-pointer mb-5 group"
+            >
+              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+              </svg>
+              <span>{googleLoading ? "Google orqali ulanmoqda..." : "Google orqali davom etish (1-klik)"}</span>
+            </button>
+
+            <div className="flex items-center gap-3 mb-5">
+              <div className="flex-1 h-px bg-white/10" />
+              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">yoki email orqali</span>
+              <div className="flex-1 h-px bg-white/10" />
             </div>
 
             <div className="grid grid-cols-2 p-1 rounded-xl bg-white/[0.04] border border-white/10 mb-5">
@@ -946,29 +1116,66 @@ function DashboardView({ user, leaderboard, setView, toast, refreshUser }) {
             </button>
           </div>
 
-          {leaderboard.length === 0 ? (
-            <Empty text="Hali developerlar yo‘q" sub="Foydalanuvchilar ro‘yxatdan o‘tganda shu yerda chiqadi." />
-          ) : (
-            <div className="space-y-2">
-              {leaderboard.slice(0, 5).map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-3 p-3 rounded-xl border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.04] transition"
-                >
-                  <div className="w-6 text-center text-xs font-bold text-slate-500">#{item.rank}</div>
-                  <Avatar user={item} size="sm" />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-bold text-white truncate">{item.name}</div>
-                    <div className="text-[10px] text-slate-500">{item.province}</div>
+          {(() => {
+            const founder = leaderboard.find((u) => u.email === "aminovhusamiddin@gmail.com");
+            const ranked = leaderboard.filter((u) => u.email !== "aminovhusamiddin@gmail.com");
+
+            return (
+              <>
+                {/* Founder Elevated Card */}
+                {founder && (
+                  <div
+                    onClick={() => setView("leaderboard")}
+                    className="p-3.5 rounded-2xl border-2 border-amber-400/60 bg-gradient-to-r from-[#1a1000] via-[#0f0a00] to-[#1a1000] flex items-center gap-3 shadow-[0_0_24px_rgba(251,191,36,0.18)] hover:border-amber-400 transition cursor-pointer mb-3 relative overflow-hidden"
+                  >
+                    <div className="relative shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-500 flex items-center justify-center font-black text-slate-950 text-sm shadow ring-2 ring-amber-400 border border-yellow-200">
+                        {founder.name?.slice(0, 2).toUpperCase()}
+                      </div>
+                      <span className="absolute -top-1.5 -right-1.5 text-xs drop-shadow">👑</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-black text-amber-100 truncate">{founder.name}</span>
+                        <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 shadow-sm">
+                          👑 AslKod Asoschisi
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-amber-400/70">{founder.province} • Platform Asoschisi</div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-xs font-black text-amber-300">{formatScore(founder.score)}</div>
+                      <div className="text-[10px] text-amber-500 font-semibold">Level {founder.level}</div>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-xs font-black text-white">{formatScore(item.score)}</div>
-                    <div className="text-[10px] text-violet-400 font-medium">Level {item.level}</div>
+                )}
+
+                {ranked.length === 0 && !founder ? (
+                  <Empty text="Hali developerlar yo‘q" sub="Foydalanuvchilar ro‘yxatdan o‘tganda shu yerda chiqadi." />
+                ) : (
+                  <div className="space-y-2">
+                    {ranked.slice(0, 5).map((item, idx) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-3 p-3 rounded-xl border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.04] transition"
+                      >
+                        <div className="w-6 text-center text-xs font-bold text-slate-500">#{idx + 1}</div>
+                        <Avatar user={item} size="sm" />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-bold text-white truncate">{item.name}</div>
+                          <div className="text-[10px] text-slate-500">{item.province}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs font-black text-white">{formatScore(item.score)}</div>
+                          <div className="text-[10px] text-violet-400 font-medium">Level {item.level}</div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                )}
+              </>
+            );
+          })()}
         </Glass>
 
         {/* Quick Actions */}
@@ -1056,6 +1263,9 @@ function LeaderboardView({ toast, onOpenProfile }) {
     return () => clearInterval(timer);
   }, [load]);
 
+  const founder = items.find(u => u.email === "aminovhusamiddin@gmail.com");
+  const ranked = items.filter(u => u.email !== "aminovhusamiddin@gmail.com");
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <Header
@@ -1071,98 +1281,100 @@ function LeaderboardView({ toast, onOpenProfile }) {
 
       {/* Filter Bar */}
       <div className="grid sm:grid-cols-3 gap-3">
-        <select
-          value={period}
-          onChange={(e) => setPeriod(e.target.value)}
-          className="rounded-xl border border-white/10 bg-[#0d0f17] px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500"
-        >
+        <select value={period} onChange={(e) => setPeriod(e.target.value)} className="rounded-xl border border-white/10 bg-[#0d0f17] px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500">
           <option value="all">Barcha vaqtlar</option>
           <option value="month">Oylik reyting</option>
           <option value="week">Haftalik reyting</option>
         </select>
-
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          className="rounded-xl border border-white/10 bg-[#0d0f17] px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500"
-        >
+        <select value={category} onChange={(e) => setCategory(e.target.value)} className="rounded-xl border border-white/10 bg-[#0d0f17] px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500">
           <option value="all">Barcha kategoriyalar</option>
-          {CATEGORIES.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.title}
-            </option>
-          ))}
+          {CATEGORIES.map((c) => (<option key={c.id} value={c.id}>{c.title}</option>))}
         </select>
-
-        <select
-          value={province}
-          onChange={(e) => setProvince(e.target.value)}
-          className="rounded-xl border border-white/10 bg-[#0d0f17] px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500"
-          style={{ colorScheme: "dark" }}
-        >
+        <select value={province} onChange={(e) => setProvince(e.target.value)} className="rounded-xl border border-white/10 bg-[#0d0f17] px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500" style={{ colorScheme: "dark" }}>
           <option value="all" className="bg-[#0d0f17] text-white">Barcha hududlar</option>
-          {PROVINCES.map((p) => (
-            <option key={p} value={p} className="bg-[#0d0f17] text-white">
-              {p}
-            </option>
-          ))}
+          {PROVINCES.map((p) => (<option key={p} value={p} className="bg-[#0d0f17] text-white">{p}</option>))}
         </select>
       </div>
 
-      {/* Top 3 Podium Cards if available */}
-      {items.length >= 3 ? (
+      {/* ===== ASOSCHI KARTASI — har doim ENG TEPADA, alohida ===== */}
+      {founder && (
+        <button type="button" onClick={() => onOpenProfile(founder.id)} className="w-full text-left">
+          <div className="relative rounded-2xl border-2 border-amber-400/70 bg-gradient-to-r from-[#1a1000] via-[#0f0a00] to-[#1a1000] p-5 flex items-center gap-5 shadow-[0_0_40px_0_rgba(251,191,36,0.20)] hover:shadow-[0_0_60px_0_rgba(251,191,36,0.35)] transition-all overflow-hidden">
+            <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,rgba(251,191,36,0.07)_0%,transparent_70%)]" />
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/50 to-transparent" />
+            {/* Avatar */}
+            <div className="relative flex-shrink-0">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-500 flex items-center justify-center font-black text-slate-950 text-xl shadow-lg shadow-amber-500/50 ring-4 ring-amber-400 border-2 border-yellow-200">
+                {founder.name?.slice(0, 2).toUpperCase()}
+              </div>
+              <span className="absolute -top-2.5 -right-2.5 text-xl drop-shadow-lg">👑</span>
+              {founder.online && <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-[#0d0f17]" />}
+            </div>
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <span className="text-lg font-black text-amber-100">{founder.name}</span>
+                <span className="px-2 py-0.5 rounded-lg text-[10px] font-black bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-slate-950 shadow">👑 AslKod Asoschisi</span>
+                <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">✦ Oltin Nishon</span>
+              </div>
+              <div className="text-xs text-amber-400/70 mb-1.5">{founder.province}</div>
+              <div className="flex flex-wrap gap-1">
+                {(founder.skills || []).slice(0, 4).map((s) => (
+                  <span key={s} className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-400 border border-amber-500/20">{s}</span>
+                ))}
+              </div>
+            </div>
+            {/* Score */}
+            <div className="text-right flex-shrink-0">
+              <div className="text-2xl font-black text-amber-300">{formatScore(founder.score)}</div>
+              <div className="text-[11px] text-amber-400/70">pts</div>
+              <div className="text-xs text-amber-500 font-bold mt-0.5">Level {founder.level}</div>
+              <div className="text-[10px] text-amber-700 mt-0.5 font-medium">Platform Asoschisi</div>
+            </div>
+          </div>
+        </button>
+      )}
+
+      {/* Separator */}
+      {founder && ranked.length > 0 && (
+        <div className="flex items-center gap-3 px-1">
+          <div className="flex-1 h-px bg-white/[0.05]" />
+          <span className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">Reyting jadvali</span>
+          <div className="flex-1 h-px bg-white/[0.05]" />
+        </div>
+      )}
+
+      {/* Top 3 Podium — founder EXCLUDED */}
+      {ranked.length >= 3 && (
         <div className="grid md:grid-cols-3 gap-4 pt-2">
           {/* #2 */}
-          <Glass onClick={() => onOpenProfile(items[1].id)} className="p-5 text-center border-slate-500/20 order-2 md:order-1">
-            <div className="inline-block rounded-full bg-slate-500/20 px-2.5 py-0.5 text-xs font-bold text-slate-300 mb-2">#2 O‘rin</div>
-            <Avatar user={items[1]} size="lg" />
-            <div className="flex items-center justify-center gap-1.5 mt-3 flex-wrap">
-              <h4 className="font-black text-white text-base truncate">{items[1].name}</h4>
-              {items[1].email === "aminovhusamiddin@gmail.com" && (
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-slate-950 shadow-sm">
-                  👑 Asoschisi
-                </span>
-              )}
-            </div>
-            <div className="text-xs text-slate-400">{items[1].province}</div>
-            <div className="mt-3 text-lg font-black text-cyan-300">{formatScore(items[1].score)} pts</div>
+          <Glass onClick={() => onOpenProfile(ranked[1].id)} className="p-5 text-center border-slate-500/20 order-2 md:order-1">
+            <div className="inline-block rounded-full bg-slate-500/20 px-2.5 py-0.5 text-xs font-bold text-slate-300 mb-2">#2 O'rin</div>
+            <Avatar user={ranked[1]} size="lg" />
+            <h4 className="font-black text-white text-base mt-3 truncate">{ranked[1].name}</h4>
+            <div className="text-xs text-slate-400">{ranked[1].province}</div>
+            <div className="mt-3 text-lg font-black text-cyan-300">{formatScore(ranked[1].score)} pts</div>
           </Glass>
-
-          {/* #1 Champion */}
-          <Glass onClick={() => onOpenProfile(items[0].id)} className="p-6 text-center border-amber-500/30 bg-gradient-to-b from-amber-500/5 to-transparent order-1 md:order-2 scale-105">
-            <div className="inline-block rounded-full bg-amber-500/20 px-3 py-1 text-xs font-black text-amber-300 mb-2">👑 #1 Chempion</div>
-            <Avatar user={items[0]} size="xl" />
-            <div className="flex items-center justify-center gap-1.5 mt-3 flex-wrap">
-              <h4 className="font-black text-white text-lg truncate">{items[0].name}</h4>
-              {items[0].email === "aminovhusamiddin@gmail.com" && (
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-slate-950 shadow-sm">
-                  👑 Asoschisi
-                </span>
-              )}
-            </div>
-            <div className="text-xs text-slate-400">{items[0].province}</div>
-            <div className="mt-3 text-2xl font-black text-amber-300">{formatScore(items[0].score)} pts</div>
+          {/* #1 Chempion */}
+          <Glass onClick={() => onOpenProfile(ranked[0].id)} className="p-6 text-center border-amber-500/30 bg-gradient-to-b from-amber-500/5 to-transparent order-1 md:order-2 scale-105">
+            <div className="inline-block rounded-full bg-amber-500/20 px-3 py-1 text-xs font-black text-amber-300 mb-2">🏆 #1 Chempion</div>
+            <Avatar user={ranked[0]} size="xl" />
+            <h4 className="font-black text-white text-lg mt-3 truncate">{ranked[0].name}</h4>
+            <div className="text-xs text-slate-400">{ranked[0].province}</div>
+            <div className="mt-3 text-2xl font-black text-amber-300">{formatScore(ranked[0].score)} pts</div>
           </Glass>
-
           {/* #3 */}
-          <Glass onClick={() => onOpenProfile(items[2].id)} className="p-5 text-center border-amber-800/20 order-3">
-            <div className="inline-block rounded-full bg-amber-800/20 px-2.5 py-0.5 text-xs font-bold text-amber-500 mb-2">#3 O‘rin</div>
-            <Avatar user={items[2]} size="lg" />
-            <div className="flex items-center justify-center gap-1.5 mt-3 flex-wrap">
-              <h4 className="font-black text-white text-base truncate">{items[2].name}</h4>
-              {items[2].email === "aminovhusamiddin@gmail.com" && (
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-slate-950 shadow-sm">
-                  👑 Asoschisi
-                </span>
-              )}
-            </div>
-            <div className="text-xs text-slate-400">{items[2].province}</div>
-            <div className="mt-3 text-lg font-black text-violet-300">{formatScore(items[2].score)} pts</div>
+          <Glass onClick={() => onOpenProfile(ranked[2].id)} className="p-5 text-center border-amber-800/20 order-3">
+            <div className="inline-block rounded-full bg-amber-800/20 px-2.5 py-0.5 text-xs font-bold text-amber-500 mb-2">#3 O'rin</div>
+            <Avatar user={ranked[2]} size="lg" />
+            <h4 className="font-black text-white text-base mt-3 truncate">{ranked[2].name}</h4>
+            <div className="text-xs text-slate-400">{ranked[2].province}</div>
+            <div className="mt-3 text-lg font-black text-violet-300">{formatScore(ranked[2].score)} pts</div>
           </Glass>
         </div>
-      ) : null}
+      )}
 
-      {/* Main Leaderboard Table / Rows */}
+      {/* Main table — founder EXCLUDED */}
       <Glass className="p-6">
         {loading && !items.length ? (
           <div className="py-16 text-center text-slate-500 text-sm flex items-center justify-center gap-2">
@@ -1170,38 +1382,23 @@ function LeaderboardView({ toast, onOpenProfile }) {
             <span>Reyting yuklanmoqda...</span>
           </div>
         ) : items.length === 0 ? (
-          <Empty text="Hali developerlar yo‘q" sub="Foydalanuvchilar ro‘yxatdan o‘tganda ushbu filtr bo‘yicha natijalar paydo bo‘ladi." />
+          <Empty text="Hali developerlar yo'q" sub="Foydalanuvchilar ro'yxatdan o'tganda ushbu filtr bo'yicha natijalar paydo bo'ladi." />
         ) : (
           <div className="space-y-2">
-            {items.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onOpenProfile(item.id)}
-                className="w-full flex items-center gap-4 p-3.5 rounded-xl border border-white/[0.04] bg-white/[0.01] hover:border-violet-500/30 hover:bg-white/[0.04] transition text-left"
-              >
-                <div className="w-8 text-center text-xs font-bold text-slate-400">#{item.rank}</div>
+            {ranked.map((item, idx) => (
+              <button key={item.id} type="button" onClick={() => onOpenProfile(item.id)}
+                className="w-full flex items-center gap-4 p-3.5 rounded-xl border border-white/[0.04] bg-white/[0.01] hover:border-violet-500/30 hover:bg-white/[0.04] transition text-left">
+                <div className="w-8 text-center text-xs font-bold text-slate-400">#{idx + 1}</div>
                 <Avatar user={item} size="sm" />
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-xs sm:text-sm font-bold text-white truncate">{item.name}</span>
-                    {item.email === "aminovhusamiddin@gmail.com" && (
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-slate-950 shadow-sm inline-flex items-center gap-0.5">
-                        👑 AslKod Asoschisi
-                      </span>
-                    )}
-                  </div>
+                  <div className="text-xs sm:text-sm font-bold text-white truncate">{item.name}</div>
                   <div className="text-[10px] text-slate-500">{item.province}</div>
                 </div>
-
                 <div className="hidden sm:flex flex-wrap gap-1 max-w-xs justify-end">
                   {(item.skills || []).slice(0, 3).map((s) => (
-                    <span key={s} className="rounded-full bg-white/[0.04] px-2 py-0.5 text-[10px] text-slate-400 border border-white/[0.06]">
-                      {s}
-                    </span>
+                    <span key={s} className="rounded-full bg-white/[0.04] px-2 py-0.5 text-[10px] text-slate-400 border border-white/[0.06]">{s}</span>
                   ))}
                 </div>
-
                 <div className="text-right pl-2">
                   <div className="text-xs sm:text-sm font-black text-white">{formatScore(item.score)} pts</div>
                   <div className="text-[10px] text-violet-400 font-bold">Level {item.level}</div>
@@ -1214,6 +1411,7 @@ function LeaderboardView({ toast, onOpenProfile }) {
     </div>
   );
 }
+
 
 // ----------------- PROCTORING & ANTI-CHEAT SYSTEM -----------------
 function ProctoringWatermark({ user }) {
@@ -1678,6 +1876,7 @@ function CodeLabView({ toast, refreshUser, user, onChallengeModeChange }) {
       setCameraStream(null);
     }
     setSelected(null);
+    if (onChallengeModeChange) onChallengeModeChange(false);
     setLabDisqualified(false);
     loadChallenges();
   }
@@ -1737,6 +1936,7 @@ function CodeLabView({ toast, refreshUser, user, onChallengeModeChange }) {
       const response = await api.get(`/api/challenges/${item.id}`);
       const c = response.data?.challenge || response.data;
       setSelected(c);
+      if (onChallengeModeChange) onChallengeModeChange(true);
       setCode(c.starterCode || "");
       setLanguage(c.language || "javascript");
       setQuizAnswer(null);
@@ -4662,7 +4862,13 @@ function MessagesView({ toast }) {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
   const [selectedTimes, setSelectedTimes] = useState({});
-  const [respondedInvites, setRespondedInvites] = useState({});
+  const [respondedInvites, setRespondedInvites] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("aslkod_responded_invites") || "{}");
+    } catch {
+      return {};
+    }
+  });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -4692,7 +4898,13 @@ function MessagesView({ toast }) {
     setActionLoading(invitationId);
     try {
       await api.post(`/api/invitations/${invitationId}/respond`, { action });
-      setRespondedInvites((prev) => ({ ...prev, [invitationId]: action }));
+      setRespondedInvites((prev) => {
+        const next = { ...prev, [invitationId]: action };
+        try {
+          localStorage.setItem("aslkod_responded_invites", JSON.stringify(next));
+        } catch {}
+        return next;
+      });
       toast(
         action === "ACCEPT" ? "success" : "info",
         action === "ACCEPT" ? "Taklif qabul qilindi!" : "Taklif rad etildi",
@@ -4715,7 +4927,13 @@ function MessagesView({ toast }) {
     setActionLoading(invitationId);
     try {
       await api.post(`/api/invitations/${invitationId}/confirm-interview`, { selectedTime: timeVal });
-      setRespondedInvites((prev) => ({ ...prev, [invitationId]: "INTERVIEW_CONFIRMED" }));
+      setRespondedInvites((prev) => {
+        const next = { ...prev, [invitationId]: "INTERVIEW_CONFIRMED" };
+        try {
+          localStorage.setItem("aslkod_responded_invites", JSON.stringify(next));
+        } catch {}
+        return next;
+      });
       toast("success", "Suhbat tasdiqlandi!", `Belgilangan vaqt: ${timeVal}. Kompaniya vakili bilan Telegram orqali bog'lanishingiz mumkin.`);
       load();
     } catch (err) {
@@ -4749,6 +4967,8 @@ function MessagesView({ toast }) {
               const data = item.data || {};
               const invId = data.invitationId;
               const hasResponded = respondedInvites[invId];
+              const isAccepted = hasResponded === "ACCEPT" || hasResponded === "ACCEPTED" || data.invitationStatus === "ACCEPTED" || data.invitationStatus === "INTERVIEW_CONFIRMED";
+              const isDeclined = hasResponded === "DECLINE" || hasResponded === "DECLINED" || data.invitationStatus === "DECLINED";
 
               return (
                 <div
@@ -4806,12 +5026,12 @@ function MessagesView({ toast }) {
                       {/* Interactive Section for Company Invitation */}
                       {item.type === "company_invitation" && invId && (
                         <div className="mt-3.5 pt-3 border-t border-white/[0.08] flex items-center gap-3 flex-wrap">
-                          {hasResponded === "ACCEPT" ? (
+                          {isAccepted ? (
                             <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20">
-                              <Check size={14} /> Taklif qabul qilindi. Kompaniya suhbat vaqtini yuboradi.
+                              <Check size={14} /> Taklif qabul qilingan. Kompaniya suhbat vaqtini yuboradi.
                             </span>
-                          ) : hasResponded === "DECLINE" ? (
-                            <span className="text-xs text-slate-400 italic">Taklif rad etildi.</span>
+                          ) : isDeclined ? (
+                            <span className="text-xs text-slate-400 italic">Taklif rad etilgan.</span>
                           ) : (
                             <>
                               <button
@@ -5200,7 +5420,17 @@ function App() {
     );
   }
 
-  const isDistractionFree = inChallengeMode && view === "code";
+  const [isFullscreen, setIsFullscreen] = useState(Boolean(document.fullscreenElement));
+
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener("fullscreenchange", handleFsChange);
+    return () => document.removeEventListener("fullscreenchange", handleFsChange);
+  }, []);
+
+  const isDistractionFree = (inChallengeMode || isFullscreen) && (view === "code" || isFullscreen);
 
   return (
     <div className="min-h-screen bg-[#07080e] text-white selection:bg-violet-500/30">
