@@ -11,3 +11,10 @@ button,input,textarea,select{font:inherit}
 ::-webkit-scrollbar-track{background:#080910}
 ::-webkit-scrollbar-thumb{background:#25263a;border-radius:999px}
 ::-webkit-scrollbar-thumb:hover{background:#353651}
+
+/* Anti-Screenshot / Anti-Print Protection */
+@media print {
+  body {
+    display: none !important;
+  }
+}

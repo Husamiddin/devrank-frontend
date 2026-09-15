@@ -1863,8 +1863,11 @@ function CodeLabView({ toast, refreshUser, user, onChallengeModeChange }) {
     const handleFs = () => {
       if (gracePeriodActive) return;
       if (!document.fullscreenElement && !labSafeExitRef.current) {
-        reportSuspicion("To'liq ekrandan chiqildi");
-        toast("error", "Anti-Cheat: Shubha bor!", "To'liq ekrandan chiqildi! Topshiriq 'Shubha bor' deb belgilandi.");
+        reportSuspicion("To'liq ekrandan chiqildi (Esc / Fullscreen exit)");
+        toast("error", "Anti-Cheat: Shubha bor!", "To'liq ekrandan chiqildi! Topshiriq 'Shubha bor' deb belgilandi va bekor qilindi.");
+        setTimeout(() => {
+          closeChallengeSafely();
+        }, 1200);
       }
     };
 
@@ -1881,23 +1884,49 @@ function CodeLabView({ toast, refreshUser, user, onChallengeModeChange }) {
     };
   }, [selected, toast, reportSuspicion]);
 
-  // Anti-Screenshot and DevTools Protection
+  // Anti-Screenshot and DevTools Protection + Escape Key Anti-Cheat
   useEffect(() => {
     if (!selected) return;
 
     const handleKeyDown = (e) => {
-      // PrintScreen
+      // 1. Escape (Esc) Anti-Cheat Protection
+      if (e.key === "Escape" || e.keyCode === 27) {
+        e.preventDefault();
+        reportSuspicion("Escape (Esc) tugmasi bosildi — Anti-Cheat qoidasi buzildi");
+        toast(
+          "error",
+          "Anti-Cheat: Shubha bor!",
+          "Test paytida Escape (Esc) tugmasini bosish taqiqlangan! Topshiriq 'Shubha bor' deb belgilandi va bekor qilindi."
+        );
+        setTimeout(() => {
+          closeChallengeSafely();
+        }, 1200);
+        return;
+      }
+
+      // 2. PrintScreen
       if (e.key === "PrintScreen" || e.keyCode === 44) {
         e.preventDefault();
         try {
           if (navigator.clipboard?.writeText) {
-            navigator.clipboard.writeText("Maxfiy kontent — AslKod xavfsizligi!").catch(() => {});
+            navigator.clipboard.writeText("Xavfsizlik! Platformani skrinshot qilish qat'iyan taqiqlanadi!").catch(() => {});
           }
         } catch (err) {}
-        toast("error", "Skrinshot taqiqlangan!", "Ekranni rasmga olish yoki skrinshot qilish qat'iyan taqiqlanadi!");
+        toast("error", "Xavfsizlik!", "Platformani skrinshot qilish qat'iyan taqiqlanadi!");
       }
 
-      // DevTools
+      // 3. Windows Snipping Tool (Win+Shift+S) / Mac (Cmd+Shift+3/4/5)
+      if (e.shiftKey && (e.metaKey || e.ctrlKey) && ["S", "s", "3", "4", "5"].includes(e.key)) {
+        e.preventDefault();
+        try {
+          if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText("Xavfsizlik! Platformani skrinshot qilish qat'iyan taqiqlanadi!").catch(() => {});
+          }
+        } catch (err) {}
+        toast("error", "Xavfsizlik!", "Platformani skrinshot qilish qat'iyan taqiqlanadi!");
+      }
+
+      // 4. DevTools
       if (
         e.key === "F12" ||
         (e.ctrlKey && e.shiftKey && ["I", "i", "J", "j", "C", "c"].includes(e.key)) ||
@@ -1914,7 +1943,7 @@ function CodeLabView({ toast, refreshUser, user, onChallengeModeChange }) {
         e.preventDefault();
         try {
           if (navigator.clipboard?.writeText) {
-            navigator.clipboard.writeText("").catch(() => {});
+            navigator.clipboard.writeText("Xavfsizlik! Platformani skrinshot qilish qat'iyan taqiqlanadi!").catch(() => {});
           }
         } catch (err) {}
       }
@@ -1927,7 +1956,7 @@ function CodeLabView({ toast, refreshUser, user, onChallengeModeChange }) {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [selected, toast]);
+  }, [selected, toast, reportSuspicion]);
 
   function closeChallengeSafely() {
     labSafeExitRef.current = true;
@@ -5461,6 +5490,57 @@ function App() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  // Global Platform Anti-Screenshot & Security Protection
+  useEffect(() => {
+    const handleGlobalSecurityKeyDown = (e) => {
+      // 1. PrintScreen (all platforms)
+      if (e.key === "PrintScreen" || e.keyCode === 44) {
+        e.preventDefault();
+        try {
+          if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText("Xavfsizlik! Platformani skrinshot qilish qat'iyan taqiqlanadi!").catch(() => {});
+          }
+        } catch {}
+        toast("error", "Xavfsizlik!", "Platformani skrinshot qilish qat'iyan taqiqlanadi!");
+      }
+
+      // 2. Windows Snipping Tool (Win + Shift + S) or Mac (Cmd + Shift + 3/4/5)
+      if (e.shiftKey && (e.metaKey || e.ctrlKey) && ["S", "s", "3", "4", "5"].includes(e.key)) {
+        e.preventDefault();
+        try {
+          if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText("Xavfsizlik! Platformani skrinshot qilish qat'iyan taqiqlanadi!").catch(() => {});
+          }
+        } catch {}
+        toast("error", "Xavfsizlik!", "Platformani skrinshot qilish qat'iyan taqiqlanadi!");
+      }
+
+      // 3. Print dialog (Ctrl+P / Cmd+P)
+      if ((e.ctrlKey || e.metaKey) && (e.key === "p" || e.key === "P")) {
+        e.preventDefault();
+        toast("error", "Xavfsizlik!", "Platformani chop etish yoki PDF saqlash taqiqlangan!");
+      }
+    };
+
+    const handleGlobalSecurityKeyUp = (e) => {
+      if (e.key === "PrintScreen" || e.keyCode === 44) {
+        e.preventDefault();
+        try {
+          if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText("Xavfsizlik! Platformani skrinshot qilish qat'iyan taqiqlanadi!").catch(() => {});
+          }
+        } catch {}
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalSecurityKeyDown);
+    window.addEventListener("keyup", handleGlobalSecurityKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleGlobalSecurityKeyDown);
+      window.removeEventListener("keyup", handleGlobalSecurityKeyUp);
+    };
+  }, [toast]);
 
   function logout() {
     // Exit fullscreen safely before logging out to avoid blank screen
