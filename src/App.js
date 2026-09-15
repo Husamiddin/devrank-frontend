@@ -1785,19 +1785,28 @@ function CodeLabView({ toast, refreshUser, user, onChallengeModeChange }) {
     };
 
     // Anti-Cheat listeners: tab change, window blur, or exit fullscreen triggers failure
+    // Grace period: wait 4 seconds after challenge opens (camera grant, fullscreen entry cause blur events)
+    let gracePeriodActive = true;
+    const gracePeriodTimer = setTimeout(() => {
+      gracePeriodActive = false;
+    }, 4000);
+
     const handleVis = () => {
+      if (gracePeriodActive) return;
       if (document.hidden && !labSafeExitRef.current) {
         reportSuspicion("Oynadan chiqib ketish / Tab almashtirish");
         toast("error", "Anti-Cheat: Shubha bor!", "Boshqa oynaga o'tish aniqlandi! Topshiriq 'Shubha bor' deb belgilandi.");
       }
     };
     const handleBlur = () => {
+      if (gracePeriodActive) return;
       if (!labSafeExitRef.current) {
         reportSuspicion("Oyna faolligi yo'qotildi / Blur");
         toast("error", "Anti-Cheat: Shubha bor!", "Oyna faolligi yo'qotildi! Topshiriq 'Shubha bor' deb belgilandi.");
       }
     };
     const handleFs = () => {
+      if (gracePeriodActive) return;
       if (!document.fullscreenElement && !labSafeExitRef.current) {
         reportSuspicion("To'liq ekrandan chiqildi");
         toast("error", "Anti-Cheat: Shubha bor!", "To'liq ekrandan chiqildi! Topshiriq 'Shubha bor' deb belgilandi.");
@@ -1810,6 +1819,7 @@ function CodeLabView({ toast, refreshUser, user, onChallengeModeChange }) {
 
     return () => {
       clearInterval(timer);
+      clearTimeout(gracePeriodTimer);
       document.removeEventListener("visibilitychange", handleVis);
       window.removeEventListener("blur", handleBlur);
       document.removeEventListener("fullscreenchange", handleFs);
@@ -2678,9 +2688,9 @@ function ProfileView({ user, own, toast, refreshUser }) {
                 <div className="mt-4 flex items-center gap-2 pt-3 border-t border-white/[0.06]">
                   {p.liveUrl && (
                     <a
-                      href={p.liveUrl}
+                      href={p.liveUrl.startsWith("http") ? p.liveUrl : `https://${p.liveUrl}`}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-xs font-semibold text-violet-400 hover:text-violet-300"
                     >
                       <ExternalLink size={12} /> Live Demo
@@ -2688,9 +2698,9 @@ function ProfileView({ user, own, toast, refreshUser }) {
                   )}
                   {p.repoUrl && (
                     <a
-                      href={p.repoUrl}
+                      href={p.repoUrl.startsWith("http") ? p.repoUrl : `https://${p.repoUrl}`}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-white"
                     >
                       <FileCode2 size={12} /> GitHub Repo
@@ -5293,7 +5303,12 @@ function App() {
     }
   });
 
-  const [view, setView] = useState("dashboard");
+  const [view, setView] = useState(() => {
+    // Initialize view from URL pathname on first load
+    const path = window.location.pathname.replace("/", "") || "dashboard";
+    const valid = ["dashboard", "leaderboard", "code", "profile", "competitions", "content", "messages"];
+    return valid.includes(path) ? path : "dashboard";
+  });
   const [toasts, setToasts] = useState([]);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -5302,6 +5317,39 @@ function App() {
   const [loadingUser, setLoadingUser] = useState(Boolean(user));
 
   const [inChallengeMode, setInChallengeMode] = useState(false);
+
+  // ⚠️ IMPORTANT: These hooks MUST be before any early return to satisfy React rules of hooks
+  const [isFullscreen, setIsFullscreen] = useState(Boolean(document.fullscreenElement));
+
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener("fullscreenchange", handleFsChange);
+    return () => document.removeEventListener("fullscreenchange", handleFsChange);
+  }, []);
+
+  // Sync URL with view state
+  useEffect(() => {
+    const path = view === "dashboard" ? "/" : `/${view}`;
+    if (window.location.pathname !== path) {
+      window.history.pushState(null, "", path);
+    }
+  }, [view]);
+
+  // Handle browser back/forward navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname.replace("/", "") || "dashboard";
+      const valid = ["dashboard", "leaderboard", "code", "profile", "competitions", "content", "messages"];
+      if (valid.includes(path)) {
+        setView(path);
+        setProfileOverride(null);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   const toast = useCallback((type, title, message) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -5358,17 +5406,24 @@ function App() {
   }, []);
 
   function logout() {
+    // Exit fullscreen safely before logging out to avoid blank screen
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
     localStorage.removeItem(STORAGE.token);
     localStorage.removeItem(STORAGE.user);
     setUser(null);
     setProfileOverride(null);
     setLeaderboard([]);
     setInChallengeMode(false);
+    setView("dashboard");
+    window.history.pushState(null, "", "/");
   }
 
   function onAuthenticated(nextUser) {
     setUser(normalizeUser(nextUser));
     setView("dashboard");
+    window.history.pushState(null, "", "/");
   }
 
   async function openProfile(id) {
@@ -5419,16 +5474,6 @@ function App() {
       </>
     );
   }
-
-  const [isFullscreen, setIsFullscreen] = useState(Boolean(document.fullscreenElement));
-
-  useEffect(() => {
-    const handleFsChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement));
-    };
-    document.addEventListener("fullscreenchange", handleFsChange);
-    return () => document.removeEventListener("fullscreenchange", handleFsChange);
-  }, []);
 
   const isDistractionFree = (inChallengeMode || isFullscreen) && (view === "code" || isFullscreen);
 
