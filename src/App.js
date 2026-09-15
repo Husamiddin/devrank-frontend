@@ -51,6 +51,45 @@ import {
   XCircle,
 } from "lucide-react";
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-[400px] flex flex-col items-center justify-center p-8 text-center text-white bg-[#07080e]">
+          <div className="p-6 rounded-3xl bg-red-500/10 border border-red-500/30 text-red-300 mb-4 max-w-lg shadow-2xl">
+            <h3 className="text-base font-bold mb-2 text-white">Xatolik yuz berdi</h3>
+            <p className="text-xs text-slate-400 mb-4">{this.state.error?.message || "Kutilmagan xatolik yuz berdi"}</p>
+            <div className="flex gap-2 justify-center">
+              <button
+                type="button"
+                onClick={() => {
+                  this.setState({ hasError: false, error: null });
+                  if (this.props.onReset) this.props.onReset();
+                  else window.location.reload();
+                }}
+                className="px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold transition"
+              >
+                Qayta yuklash
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const isLocal =
   typeof window !== "undefined" && (
     window.location.hostname === "localhost" ||
@@ -1472,6 +1511,11 @@ function CameraVerificationModal({ isOpen, onClose, onVerified, title = "Kamera 
 
   const handleConfirm = () => {
     if (!stream) return;
+    try {
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    } catch (e) {}
     onVerified(stream);
   };
 
@@ -1589,7 +1633,7 @@ function ProctoringCameraWidget({ stream, onSuspicionDetected, userName = "Nomzo
     const track = stream?.getVideoTracks()?.[0];
     if (track) {
       track.onended = () => {
-        onSuspicionDetected("Kamera o'chirib qo'yildi (Video stream to'xtatildi)");
+        onSuspicionDetected?.("Kamera o'chirib qo'yildi (Video stream to'xtatildi)");
       };
     }
   }, [stream, onSuspicionDetected]);
@@ -1598,17 +1642,28 @@ function ProctoringCameraWidget({ stream, onSuspicionDetected, userName = "Nomzo
   useEffect(() => {
     if (!stream) return;
 
+    let graceCycles = 10; // 15 seconds warm-up grace period
+
     const interval = setInterval(() => {
+      if (graceCycles > 0) {
+        graceCycles -= 1;
+        return;
+      }
+
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      if (!video || !canvas || video.readyState !== 4) return;
+      if (!video || !canvas || video.readyState < 2 || !video.videoWidth) return;
 
       const ctx = canvas.getContext("2d", { willReadFrequently: true });
       if (!ctx) return;
 
       const width = 160;
       const height = 120;
-      ctx.drawImage(video, 0, 0, width, height);
+      try {
+        ctx.drawImage(video, 0, 0, width, height);
+      } catch (e) {
+        return;
+      }
 
       try {
         const frame = ctx.getImageData(0, 0, width, height);
@@ -1622,11 +1677,11 @@ function ProctoringCameraWidget({ stream, onSuspicionDetected, userName = "Nomzo
         }
         const avgBrightness = totalBrightness / pixelCount;
 
-        // 1. Check if camera is covered / blacked out
-        if (avgBrightness < 8) {
+        // 1. Check if camera is covered / completely blacked out
+        if (avgBrightness < 3) {
           darknessCountRef.current += 1;
-          if (darknessCountRef.current >= 4) {
-            onSuspicionDetected("Kamera yopib qo'yilgan yoki o'ta qorong'i (Kamera nazorati buzildi)");
+          if (darknessCountRef.current >= 8) {
+            onSuspicionDetected?.("Kamera yopib qo'yilgan yoki o'ta qorong'i (Kamera nazorati buzildi)");
             return;
           }
         } else {
@@ -1642,10 +1697,10 @@ function ProctoringCameraWidget({ stream, onSuspicionDetected, userName = "Nomzo
           }
           const avgDiff = diffSum / (pixelCount / 2);
 
-          if (avgDiff > 70) {
+          if (avgDiff > 80) {
             anomalyCountRef.current += 1;
-            if (anomalyCountRef.current >= 4) {
-              onSuspicionDetected("Kamerada telefon yoki g'ayrioddiy harakatlar aniqlandi");
+            if (anomalyCountRef.current >= 5) {
+              onSuspicionDetected?.("Kamerada telefon yoki g'ayrioddiy harakatlar aniqlandi");
               return;
             }
           } else {
@@ -1733,6 +1788,16 @@ function CodeLabView({ toast, refreshUser, user, onChallengeModeChange }) {
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [pendingChallenge, setPendingChallenge] = useState(null);
 
+  const reportSuspicion = useCallback((reason) => {
+    setLabDisqualified(true);
+    if (selected?.id) {
+      api.post(`/api/challenges/${selected.id}/flag-suspicious`, { reason }).catch(() => {});
+      setChallenges((prev) =>
+        prev.map((c) => (c.id === selected.id ? { ...c, isSuspicious: true, suspicionReason: reason } : c))
+      );
+    }
+  }, [selected]);
+
   useEffect(() => {
     if (onChallengeModeChange) {
       onChallengeModeChange(Boolean(selected));
@@ -1774,16 +1839,6 @@ function CodeLabView({ toast, refreshUser, user, onChallengeModeChange }) {
       });
     }, 1000);
 
-    const reportSuspicion = (reason) => {
-      setLabDisqualified(true);
-      if (selected?.id) {
-        api.post(`/api/challenges/${selected.id}/flag-suspicious`, { reason }).catch(() => {});
-        setChallenges((prev) =>
-          prev.map((c) => (c.id === selected.id ? { ...c, isSuspicious: true, suspicionReason: reason } : c))
-        );
-      }
-    };
-
     // Anti-Cheat listeners: tab change, window blur, or exit fullscreen triggers failure
     // Grace period: wait 4 seconds after challenge opens (camera grant, fullscreen entry cause blur events)
     let gracePeriodActive = true;
@@ -1824,7 +1879,7 @@ function CodeLabView({ toast, refreshUser, user, onChallengeModeChange }) {
       window.removeEventListener("blur", handleBlur);
       document.removeEventListener("fullscreenchange", handleFs);
     };
-  }, [selected, toast]);
+  }, [selected, toast, reportSuspicion]);
 
   // Anti-Screenshot and DevTools Protection
   useEffect(() => {
@@ -2204,19 +2259,20 @@ function CodeLabView({ toast, refreshUser, user, onChallengeModeChange }) {
         </Glass>
       ) : (
         /* 3-Column Challenge Workspace with Distraction-Free Proctoring */
-        <div
-          className="relative grid xl:grid-cols-[0.8fr_1.3fr_0.9fr] gap-4 items-start select-none"
-          onContextMenu={(e) => e.preventDefault()}
-        >
-          {/* Watermark Protection */}
-          <ProctoringWatermark user={user} />
+        <ErrorBoundary onReset={closeChallengeSafely}>
+          <div
+            className="relative grid xl:grid-cols-[0.8fr_1.3fr_0.9fr] gap-4 items-start select-none"
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            {/* Watermark Protection */}
+            <ProctoringWatermark user={user} />
 
-          {/* Floating AI Proctoring Camera Widget */}
-          <ProctoringCameraWidget
-            stream={cameraStream}
-            onSuspicionDetected={reportSuspicion}
-            userName={user?.name}
-          />
+            {/* Floating AI Proctoring Camera Widget */}
+            <ProctoringCameraWidget
+              stream={cameraStream}
+              onSuspicionDetected={reportSuspicion}
+              userName={user?.name}
+            />
           {/* Left: Problem Description */}
           <Glass className="p-5 space-y-4">
             {(result || labDisqualified || challengeTimeLeft === 0 || selected.completed) && (
@@ -2516,6 +2572,7 @@ function CodeLabView({ toast, refreshUser, user, onChallengeModeChange }) {
             </Glass>
           </div>
         </div>
+        </ErrorBoundary>
       )}
 
       {/* Mandatory Camera Verification Modal */}
@@ -5508,7 +5565,9 @@ function App() {
         )}
 
         <main className={isDistractionFree ? "w-full p-2 sm:p-4 max-w-[1920px] mx-auto min-h-screen" : "max-w-[1480px] mx-auto px-4 sm:px-8 py-8"}>
-          {renderPage()}
+          <ErrorBoundary>
+            {renderPage()}
+          </ErrorBoundary>
         </main>
       </div>
 
